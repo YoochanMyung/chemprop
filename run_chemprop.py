@@ -45,7 +45,7 @@ def run_classification(smi, save_path):
         print(smi, e)
 
 
-def run_regression(smi):
+def run_regression(smi, save_path):
     property_name = smi.split('/')[-1].split('.csv')[0]
     save_dir = os.path.join(save_path,property_name)
     arguments = [
