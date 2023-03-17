@@ -237,7 +237,9 @@ def run_training(args: TrainArgs,
         batch_size=args.batch_size,
         num_workers=num_workers
     )
-
+    # torch.save(train_data_loader,os.path.join(args.save_dir, 'train_data.pt'))
+    # torch.save(val_data_loader,os.path.join(args.save_dir, 'val_data.pt'))
+    # torch.save(test_data_loader,os.path.join(args.save_dir, 'test_data.pt'))   
     if args.class_balance:
         debug(f'With class_balance, effective train size = {train_data_loader.iter_size:,}')
 
@@ -340,6 +342,9 @@ def run_training(args: TrainArgs,
         # Evaluate on test set using model with best validation score
         info(f'Model {model_idx} best validation {args.metric} = {best_score:.6f} on epoch {best_epoch}')
         model = load_checkpoint(os.path.join(save_dir, MODEL_FILE_NAME), device=args.device, logger=logger)
+        # Save scores
+        with open(os.path.join(args.save_dir, 'val_scores.json'), 'w') as f:
+            json.dump(best_score, f, indent=4, sort_keys=True)
 
         if empty_test_set:
             info(f'Model {model_idx} provided with no test set, no metric evaluation will be performed.')

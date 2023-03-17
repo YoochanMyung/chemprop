@@ -4,17 +4,8 @@ import pandas as pd
 import glob
 import numpy as np
 from multiprocessing import Pool
+import sys
 
-#dir_path = '/home/ymyung/projects/deeppk/1_dataset/pk_data/processed_data/Alex/all/datasets'
-# dir_path = '/home/ymyung/projects/deeppk/1_dataset/compared/scaffold_split'
-# dir_path = '/home/ymyung/projects/deeppk/1_dataset/pk_data/processed_data/all_new/6_deeppk_tox'
-dir_path = '/home/ymyung/projects/deeppk/2_ML/Datasets'
-# all_smiles_list = glob.glob(os.path.join(dir_path,'**/*.smi'))
-# all_smiles_list = [smi for smi in all_smiles_list if 'Murckos' in smi]
-# all_smiles_list = [smi for smi in all_smiles_list if 'interpretable' in smi]
-# all_smiles_list = [smi for smi in all_smiles_list if not 'toxicity' in smi]
-# all_smiles_list= glob.glob(os.path.join(dir_path,'**/fold_0/*.csv'),recursive=True)
-all_smiles_list= glob.glob(os.path.join(dir_path,'*.csv'),recursive=True)
 
 regression_tasks = list()
 classification_tasks = list()
@@ -33,12 +24,12 @@ def parallelize_dataframe(p_list, func, num_cores=10):
     pool.close()
     pool.join()
 
-def run_train(smi_list):
+def run_train(smi_list, save_path):
     for each_smi in smi_list:
         print("Working on: {}".format(each_smi))
         data_path = each_smi
         property_name = each_smi.split('/')[-1].split('.csv')[0]
-        save_dir = os.path.join('/home/ymyung/projects/deeppk/3_Results/',property_name)
+        save_dir = os.path.join(save_path,property_name)
         arguments = [
         '--smiles_columns','smiles_standarized',
         '--data_path', data_path,
@@ -46,7 +37,7 @@ def run_train(smi_list):
         '--dataset_type', 'classification',
         '--loss_function','mcc',
         '--save_dir', save_dir,
-        '--epochs', '20',
+        '--epochs', '50',
         # '--split_type','scaffold_balanced',
         '--split_type','random_with_repeated_smiles',
         '--num_folds','5',
@@ -56,11 +47,11 @@ def run_train(smi_list):
         '--metric','mcc',
         '--extra_metrics', 'f1','auc','accuracy',
         '--save_preds',
-        # '--num_workers','2',
+        '--num_workers','4',
         #'--ensemble_size', '5',
         # '--gpu',0,
         '--features_generator','rdkit_2d_normalized', # additional
-        '--no_features_scaling' # additional    
+        '--no_features_scaling' # additional
         ]
 
         try:
@@ -74,7 +65,7 @@ def run_test(smi_list):
     for each_smi in smi_list:
         print("Working on: {}".format(each_smi))
         property_name = each_smi.split('/')[-1].split('.csv')[0]
-        save_dir = os.path.join('/home/ymyung/projects/deeppk/3_Results/all_new',property_name)
+        save_dir = os.path.join(save_path,property_name)
         arguments = [
         '--test_path', '{}/fold_4/test_smiles.csv'.format(save_dir),
         '--preds_path', '{}/test_preds_cla.csv'.format(save_dir),
@@ -91,11 +82,15 @@ def run_test(smi_list):
 
 
 if __name__ == '__main__':
+    dir_path = sys.argv[1]
+    save_path = sys.argv[2]
+    all_smiles_list= glob.glob(os.path.join(dir_path,'*.csv'),recursive=True)
+
     for each_csv in all_smiles_list:
         if check_categorical(pd.read_csv(each_csv,sep=',')):
             classification_tasks.append(each_csv)
         else:
             regression_tasks.append(each_csv)
     # parallelize_dataframe(classification_tasks, run_train)
-    #run_train(classification_tasks)
-    run_test(classification_tasks)
+    run_train(classification_tasks,save_path)
+    #run_test(classification_tasks)
