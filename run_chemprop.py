@@ -9,8 +9,13 @@ def check_categorical(input_pd):
     else:
         return True
 
-def run_classification(smi, save_path):
+def run_classification(smi, save_path, split_type='RANDOM'):
     print("Working on: {}".format(smi))
+    if split_type.upper() == 'RANDOM':
+        split_type = 'random_with_repeated_smiles'
+    else:
+        split_type = 'scaffold_balanced'
+
     data_path = smi
     property_name = smi.split('/')[-1].split('.csv')[0]
     save_dir = os.path.join(save_path,property_name)
@@ -19,11 +24,10 @@ def run_classification(smi, save_path):
     '--data_path', data_path,
     '--target_columns','label',
     '--dataset_type', 'classification',
-    '--loss_function','mcc',
+    # '--loss_function','mcc',
     '--save_dir', save_dir,
     '--epochs', '50',
-    # '--split_type','scaffold_balanced',
-    '--split_type','random_with_repeated_smiles',
+    '--split_type',split_type,
     '--num_folds','5',
     '--save_smiles_splits',
     '--quiet',
@@ -45,8 +49,13 @@ def run_classification(smi, save_path):
         print(smi, e)
 
 
-def run_regression(smi, save_path):
+def run_regression(smi, save_path, split_type='RANDOM'):
     property_name = smi.split('/')[-1].split('.csv')[0]
+    if split_type.upper() == 'RANDOM':
+        split_type = 'random_with_repeated_smiles'
+    else:
+        split_type = 'scaffold_balanced'
+    
     save_dir = os.path.join(save_path,property_name)
     arguments = [
     '--smiles_columns','smiles_standarized',
@@ -56,8 +65,7 @@ def run_regression(smi, save_path):
     # '--loss_function','mse',
     '--save_dir', save_dir,
     '--epochs', '50',
-    # '--split_type','scaffold_balanced',
-    '--split_type','random_with_repeated_smiles',
+    '--split_type',split_type,
     '--num_folds','5',
     '--save_smiles_splits',
     '--metric', 'rmse',
@@ -102,10 +110,11 @@ if __name__ == '__main__':
     input_csv = sys.argv[1]
     save_path = sys.argv[2]
     run_type = sys.argv[3]
+    split_type = sys.argv[4]
 
     if run_type == 'regression':
-        run_regression(input_csv,save_path)
+        run_regression(input_csv,save_path,split_type)
         run_test(input_csv,save_path)
     else:
-        run_classification(input_csv,save_path)
+        run_classification(input_csv,save_path,split_type)
         run_test(input_csv,save_path)
