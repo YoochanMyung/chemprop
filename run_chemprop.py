@@ -1,6 +1,7 @@
 import os
 import chemprop
 import sys
+import argparse
 
 def check_categorical(input_pd):
     components = set(input_pd['label'].to_list())
@@ -9,12 +10,16 @@ def check_categorical(input_pd):
     else:
         return True
 
-def run_classification(smi, save_path, split_type='RANDOM'):
+def run_classification(smi, save_path, split_type, loss_fn, use_rdkit):
     print("Working on: {}".format(smi))
-    if split_type.upper() == 'RANDOM':
+
+    if split_type == 'random':
         split_type = 'random_with_repeated_smiles'
     else:
         split_type = 'scaffold_balanced'
+
+    if loss_fn == 'bce':
+        loss_fn = 'binary_cross_entropy'
 
     data_path = smi
     property_name = smi.split('/')[-1].split('.csv')[0]
@@ -24,23 +29,26 @@ def run_classification(smi, save_path, split_type='RANDOM'):
     '--data_path', data_path,
     '--target_columns','label',
     '--dataset_type', 'classification',
-    # '--loss_function','mcc',
+    '--loss_function',loss_fn,
     '--save_dir', save_dir,
     '--epochs', '50',
     '--split_type',split_type,
-    '--num_folds','5',
+    '--num_folds','10',
     '--save_smiles_splits',
     '--quiet',
     '--show_individual_scores',
     '--metric','mcc',
     '--extra_metrics', 'f1','auc','accuracy',
     '--save_preds',
-    '--num_workers','4',
-    #'--ensemble_size', '5',
-    # '--gpu',0,
+    '--num_workers','4']
+
+    extra_arg = [
     '--features_generator','rdkit_2d_normalized', # additional
     '--no_features_scaling' # additional
     ]
+
+    if use_rdkit:
+        arguments = arguments + extra_arg
 
     try:
         args = chemprop.args.TrainArgs().parse_args(arguments)
@@ -49,36 +57,43 @@ def run_classification(smi, save_path, split_type='RANDOM'):
         print(smi, e)
 
 
-def run_regression(smi, save_path, split_type='RANDOM'):
+def run_regression(smi, save_path, split_type, loss_fn, use_rdki):
     property_name = smi.split('/')[-1].split('.csv')[0]
-    if split_type.upper() == 'RANDOM':
+    if split_type == 'random':
         split_type = 'random_with_repeated_smiles'
     else:
         split_type = 'scaffold_balanced'
-    
+
+    if loss_fn == 'bce':
+        loss_fn = 'binary_cross_entropy'
+
     save_dir = os.path.join(save_path,property_name)
     arguments = [
     '--smiles_columns','smiles_standarized',
     '--data_path', smi,
     '--target_columns','label',
     '--dataset_type', 'regression',
-    # '--loss_function','mse',
+    '--loss_function', loss_fn,
     '--save_dir', save_dir,
     '--epochs', '50',
     '--split_type',split_type,
-    '--num_folds','5',
+    '--num_folds','10',
     '--save_smiles_splits',
     '--metric', 'rmse',
     '--extra_metrics', 'r2', 'mse','mae',
     '--quiet',
     '--num_workers','4',
     '--show_individual_scores',
-    '--save_preds',
-    # '--gpu',0,
-    # '--ensemble_size', '5',
+    '--save_preds']
+
+    extra_args = [
     '--features_generator','rdkit_2d_normalized', # additional
     '--no_features_scaling' # additional,
     ]
+
+    if use_rdkit:
+        arguments = arguments + extra_args
+
     try:
         args = chemprop.args.TrainArgs().parse_args(arguments)
         mean_score, std_score = chemprop.train.cross_validate(args=args, train_func=chemprop.train.run_training)
@@ -86,7 +101,7 @@ def run_regression(smi, save_path, split_type='RANDOM'):
         print(smi, e)
 
 
-def run_test(smi,save_path):
+def run_test(smi,save_path,use_rdkit):
     print("Working on: {}".format(smi))
     property_name = smi.split('/')[-1].split('.csv')[0]
     save_dir = os.path.join(save_path,property_name)
@@ -94,10 +109,15 @@ def run_test(smi,save_path):
     arguments = [
     '--test_path', '{}/fold_4/test_smiles.csv'.format(save_dir),
     '--preds_path', '{}/test_preds_cla.csv'.format(save_dir),
-    '--checkpoint_dir', save_dir,
+    '--checkpoint_dir', save_dir]
+
+    extra_args = [
     '--features_generator','rdkit_2d_normalized', # additional
     '--no_features_scaling' # additional
     ]
+
+    if use_rdkit:
+        arguments = arguments + extra_args
 
     try:
         args = chemprop.args.PredictArgs().parse_args(arguments)
@@ -107,14 +127,26 @@ def run_test(smi,save_path):
 
 
 if __name__ == '__main__':
-    input_csv = sys.argv[1]
-    save_path = sys.argv[2]
-    run_type = sys.argv[3]
-    split_type = sys.argv[4]
+    parser = argparse.ArgumentParser(description='ex) python run_chemprop.py aaa.csv ./classification -run_type classification -split_type Random -loss_fn mcc -use_rdkit')
+    parser.add_argument("input_csv", help="Choose input CSV(comma-separated values) format file",type=str)
+    parser.add_argument("save_path", help="Choose dirpath",type=str)
+    parser.add_argument("-run_type", help="Run type between regression and classification",choices=['classification','regression'], default="classification")
+    parser.add_argument("-split_type", help="Random or Scaffold",choices=['random','scaffold'], default="random")
+    parser.add_argument("-loss_fn", help="[bce,mcc,mae]",choices=['bce','mcc','mae'], default="bce")
+    parser.add_argument("-use_rdkit", help="Choose the number of shuffling", action='store_true')
+
+    args = parser.parse_args()
+
+    input_csv = args.input_csv
+    save_path = args.save_path
+    run_type = args.run_type
+    split_type = args.split_type
+    loss_fn = args.loss_fn
+    use_rdkit = args.use_rdkit
 
     if run_type == 'regression':
-        run_regression(input_csv,save_path,split_type)
-        run_test(input_csv,save_path)
+        run_regression(input_csv,save_path,split_type,loss_fn,use_rdkit)
+        run_test(input_csv,save_path,use_rdkit)
     else:
-        run_classification(input_csv,save_path,split_type)
-        run_test(input_csv,save_path)
+        run_classification(input_csv,save_path,split_type,loss_fn,use_rdkit)
+        run_test(input_csv,save_path,use_rdkit)
