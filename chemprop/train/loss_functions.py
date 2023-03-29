@@ -104,8 +104,12 @@ def mcc_class_loss(
     FP = torch.sum((1 - targets) * predictions * data_weights * mask, axis=0)
     FN = torch.sum(targets * (1 - predictions) * data_weights * mask, axis=0)
     TN = torch.sum((1 - targets) * (1 - predictions) * data_weights * mask, axis=0)
-    loss = 1 - ((TP * TN - FP * FN) / torch.sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)))
-    return loss
+
+    numerator = (TP * TN - FP * FN) + 1
+    denominator = torch.sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN) + 1e-7) +1
+
+    mcc = torch.div(numerator.sum(),denominator.sum())
+    return 1-mcc
 
 
 def mcc_multiclass_loss(
