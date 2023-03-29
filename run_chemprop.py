@@ -132,7 +132,7 @@ if __name__ == '__main__':
     parser.add_argument("save_path", help="Choose dirpath",type=str)
     parser.add_argument("-run_type", help="Run type between regression and classification",choices=['classification','regression'], default="classification")
     parser.add_argument("-split_type", help="Random or Scaffold",choices=['random','scaffold'], default="random")
-    parser.add_argument("-loss_fn", help="[bce,mcc,mae]",choices=['bce','mcc','mae'], default="bce")
+    parser.add_argument("-loss_fn", help="[bce,mcc,mse]",choices=['bce','mcc','mse'], default="bce")
     parser.add_argument("-use_rdkit", help="Choose the number of shuffling", action='store_true')
 
     args = parser.parse_args()
