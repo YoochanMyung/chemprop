@@ -336,6 +336,10 @@ def run_training(args: TrainArgs,
             if args.minimize_score and mean_val_score < best_score or \
                     not args.minimize_score and mean_val_score > best_score:
                 best_score, best_epoch = mean_val_score, epoch
+                best_scores = {'mcc':multitask_mean(val_scores['mcc'], metric='mcc'),\
+                               'f1':multitask_mean(val_scores['f1'], metric='f1'),\
+                               'auc':multitask_mean(val_scores['auc'], metric='auc'),\
+                               'accuracy':multitask_mean(val_scores['accuracy'], metric='accuracy')}
                 save_checkpoint(os.path.join(save_dir, MODEL_FILE_NAME), model, scaler, features_scaler,
                                 atom_descriptor_scaler, bond_descriptor_scaler, atom_bond_scaler, args)
 
@@ -344,7 +348,8 @@ def run_training(args: TrainArgs,
         model = load_checkpoint(os.path.join(save_dir, MODEL_FILE_NAME), device=args.device, logger=logger)
         # Save scores
         with open(os.path.join(args.save_dir, 'val_scores.json'), 'w') as f:
-            json.dump(best_score, f, indent=4, sort_keys=True)
+            # json.dump(best_score, f, indent=4, sort_keys=True)
+            json.dump(best_scores, f, indent=4, sort_keys=True)
 
         if empty_test_set:
             info(f'Model {model_idx} provided with no test set, no metric evaluation will be performed.')
