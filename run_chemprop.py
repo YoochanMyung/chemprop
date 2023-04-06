@@ -18,7 +18,7 @@ def run_classification(smi, save_path, split_type, loss_fn, use_rdkit):
     else:
         split_type = 'scaffold_balanced'
 
-    if loss_fn == 'bce':
+    if loss_fn == 'default' or loss_fn == 'bce':
         loss_fn = 'binary_cross_entropy'
 
     data_path = smi
@@ -64,8 +64,8 @@ def run_regression(smi, save_path, split_type, loss_fn, use_rdki):
     else:
         split_type = 'scaffold_balanced'
 
-    if loss_fn == 'bce':
-        loss_fn = 'binary_cross_entropy'
+    if loss_fn == 'default':
+        loss_fn = 'mse'
 
     save_dir = os.path.join(save_path,property_name)
     arguments = [
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     parser.add_argument("save_path", help="Choose dirpath",type=str)
     parser.add_argument("-run_type", help="Run type between regression and classification",choices=['classification','regression'], default="classification")
     parser.add_argument("-split_type", help="Random or Scaffold",choices=['random','scaffold'], default="random")
-    parser.add_argument("-loss_fn", help="[bce,mcc,mse]",choices=['bce','mcc','mse'], default="bce")
+    parser.add_argument("-loss_fn", help="[bce,mcc,mse] default is binary cross entropy for classification and mse for regression ",choices=['bce','mcc','mse'], default="default")
     parser.add_argument("-use_rdkit", help="Choose the number of shuffling", action='store_true')
 
     args = parser.parse_args()
