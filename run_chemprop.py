@@ -80,7 +80,7 @@ def run_regression(smi, save_path, split_type, loss_fn, use_rdki):
     '--num_folds','10',
     '--save_smiles_splits',
     '--metric', 'r2', # or rmse
-    '--extra_metrics', 'r2', 'mse','mae',
+    '--extra_metrics', 'rmse', 'mse','mae',
     '--quiet',
     '--num_workers','4',
     '--show_individual_scores',
