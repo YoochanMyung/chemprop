@@ -24,9 +24,7 @@ from chemprop.models import MoleculeModel
 from chemprop.nn_utils import param_count, param_count_all
 from chemprop.utils import build_optimizer, build_lr_scheduler, load_checkpoint, makedirs, \
     save_checkpoint, save_smiles_splits, load_frzn_model, multitask_mean
-from functools import partialmethod
 
-tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 def run_training(args: TrainArgs,
                  data: MoleculeDataset,
