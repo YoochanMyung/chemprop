@@ -107,6 +107,10 @@ def run_Chemprop():
     val_path =  os.path.join(smiles_dir,'{}_val.csv'.format(label)) 
     test_path =  os.path.join(smiles_dir,'{}_test.csv'.format(label)) 
 
+    train_pt = os.path.join(smiles_dir,'{}_train.pt'.format(label)) 
+    val_pt =  os.path.join(smiles_dir,'{}_val.pt'.format(label)) 
+    test_pt =  os.path.join(smiles_dir,'{}_test.pt'.format(label))
+
     train_feat_path = os.path.join(add_feats_dir, '{}_train.csv'.format(label)) 
     val_feat_path =  os.path.join(add_feats_dir, '{}_val.csv'.format(label)) 
     test_feat_path =  os.path.join(add_feats_dir, '{}_test.csv'.format(label)) 
@@ -166,15 +170,23 @@ def run_Chemprop():
     logger = create_logger(name=TRAIN_LOGGER_NAME, save_dir=args.save_dir, quiet=args.quiet)
     torch.manual_seed(args.pytorch_seed)
 
-    train_dataset = get_data(path=args.data_path,
-                            args=args,
-                            logger=logger,
-                            skip_none_targets=True,
-                            data_weights_path=args.data_weights_path)
-    
-    validate_dataset_type(train_dataset, dataset_type=args.dataset_type)
 
-    val_dataset = get_data(path=args.separate_val_path,
+    if os.path.exists(train_pt):
+        train_dataset = torch.load(train_pt)
+    else:
+        train_dataset = get_data(path=args.data_path,
+                                args=args,
+                                logger=logger,
+                                skip_none_targets=True,
+                                data_weights_path=args.data_weights_path)
+    
+        validate_dataset_type(train_dataset, dataset_type=args.dataset_type)
+        torch.save(train_dataset, train_pt)
+
+    if os.path.exists(val_pt):
+        val_dataset = torch.load(val_pt)
+    else:
+        val_dataset = get_data(path=args.separate_val_path,
                         args=args,
                         features_path=args.separate_val_features_path,
                         atom_descriptors_path=args.separate_val_atom_descriptors_path,
@@ -184,8 +196,12 @@ def run_Chemprop():
                         smiles_columns=args.smiles_columns,
                         loss_function=args.loss_function,
                         logger=logger)
-    
-    test_dataset = get_data(path=args.separate_test_path,
+        torch.save(val_dataset, val_pt)
+
+    if os.path.exists(test_pt):
+        test_dataset = torch.load(test_pt)
+    else:
+        test_dataset = get_data(path=args.separate_test_path,
                             args=args,
                             features_path=args.separate_test_features_path,
                             atom_descriptors_path=args.separate_test_atom_descriptors_path,
@@ -195,6 +211,7 @@ def run_Chemprop():
                             smiles_columns=args.smiles_columns,
                             loss_function=args.loss_function,
                             logger=logger)
+        torch.save(test_dataset, test_pt)
 
     if args.atom_descriptors == 'descriptor':
         args.atom_descriptors_size = train_dataset.atom_descriptors_size()
