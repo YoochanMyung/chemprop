@@ -42,28 +42,25 @@ metric = {
 
 parameters_dict = {
     'ffn_num_layers':{
-        'values': [3, 4, 5]
+        'values': [3, 5]
     },
     'hidden_size': {
-        'values': [128, 256, 512, 1024]
+        'values': [128, 256, 512, 1024, 2048]
     },
     'dropout': {
         'values': [0, 0.3, 0.5]
-    },
-    'epochs': {
-        'values': [10, 20, 50]
     },
     'batch_size': {
         'values': [32, 64, 128]
     },
     'depth': {
-        'values': [3, 4, 5]
+        'values': [3, 5]
     },
     'bias': {
         'values': [False, True]
     },
     'weights_ffn_num_layers' : {
-        'values': [2, 3, 4]
+        'values': [2, 4]
     },
     'aggregation': {
         'values': ['mean', 'sum', 'norm']
@@ -149,7 +146,7 @@ def run_Chemprop():
         '--hidden_size', str(wandb.config.hidden_size), #sweep_config
         '--dropout', str(wandb.config.dropout), #sweep_config
         '--ffn_num_layers', str(wandb.config.ffn_num_layers), #sweep_config
-        '--epochs', str(wandb.config.epochs), #sweep_config
+        '--epochs', str(50),
         '--batch_size', str(wandb.config.batch_size), #sweep_config
         ]
         
