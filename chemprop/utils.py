@@ -23,7 +23,9 @@ from chemprop.data import StandardScaler, AtomBondScaler, MoleculeDataset, prepr
 from chemprop.models import MoleculeModel
 from chemprop.nn_utils import NoamLR
 from chemprop.models.ffn import MultiReadout
+from functools import partialmethod
 
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 def makedirs(path: str, isfile: bool = False) -> None:
     """

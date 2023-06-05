@@ -13,7 +13,9 @@ from chemprop.args import TrainArgs
 from chemprop.data import MoleculeDataLoader, MoleculeDataset, AtomBondScaler
 from chemprop.models import MoleculeModel
 from chemprop.nn_utils import compute_gnorm, compute_pnorm, NoamLR
+from functools import partialmethod
 
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 def train(
     model: MoleculeModel,

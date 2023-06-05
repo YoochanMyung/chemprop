@@ -7,7 +7,9 @@ from tqdm import tqdm
 from chemprop.data import MoleculeDataLoader, MoleculeDataset, StandardScaler, AtomBondScaler
 from chemprop.models import MoleculeModel
 from chemprop.nn_utils import activate_dropout
+from functools import partialmethod
 
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 def predict(
     model: MoleculeModel,
