@@ -5,27 +5,12 @@ import sys
 
 import torch
 from torch.optim.lr_scheduler import ExponentialLR
-## for local
-# sys.path.append('/home/ymyung/projects/deeppk/src/chemprop')
-## for wiener
-sys.path.append('/clusterdata/uqymyung/src/chemprop')
-import chemprop
-from chemprop.train.evaluate import evaluate, evaluate_predictions
-from chemprop.train.predict import predict
-from chemprop.train import train
-from chemprop.constants import  TRAIN_LOGGER_NAME
 
-from chemprop.train.loss_functions import get_loss_func
-from chemprop.models import MoleculeModel
-from chemprop.data import get_class_sizes, get_data, MoleculeDataLoader, validate_dataset_type, get_task_names
-from chemprop.utils import build_optimizer, build_lr_scheduler, create_logger
-from chemprop.features import set_extra_atom_fdim, set_extra_bond_fdim
-
+import argparse
 import wandb
+import socket
 
-GLOBAL_ARGS = {
-}
-    
+GLOBAL_ARGS = dict()
 reg_label_list = ["bbb_cns", "bioconcF", "bp", "caco2", "caco2_logPaap", "cl", "fdamdd_reg", \
                   "fm_reg", "fu", "hydrationE", "lc50", "lc50dm", "ld50", "logbcf", "logd", \
                   "logp", "logs", "logvp", "mdck", "mp", "pka", "pkb", "ppb", "pyriformis_reg",\
@@ -34,12 +19,10 @@ reg_label_list = ["bbb_cns", "bioconcF", "bp", "caco2", "caco2_logPaap", "cl", "
 sweep_config = {
     'method': 'bayes'
 }
-
 metric = {
-    'name': 'validation_mcc',
+    'name': 'validation_corr',
     'goal': 'maximize'
 }
-
 parameters_dict = {
     'ffn_num_layers':{
         'values': [3, 5]
@@ -81,7 +64,9 @@ def is_classification(csv_file):
         return True
     
 def run_Chemprop():
-    wandb.init()
+    if not GLOBAL_ARGS['no_wandb']:
+        wandb.init()
+    
     label = GLOBAL_ARGS['label']
     type_of_run = ''
 
@@ -90,15 +75,35 @@ def run_Chemprop():
     else:
         type_of_run = 'classification'
 
-    ## for local
-    # smiles_dir = f'/home/ymyung/projects/deeppk/2_ML_running/1_Greedy/Feature_engineering/data/6_final2/only_smiles/{type_of_run}'
-    # add_feats_dir = f'/home/ymyung/projects/deeppk/2_ML_running/1_Greedy/Feature_engineering/data/6_final2/wo_smiles/{type_of_run}/powertransform/non_redundant_features/train_val_test/no_ID_label'
-    # save_dir = f'/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/2_hyper_opt/{type_of_run}'
+    hostname = socket.gethostname()
+    if hostname == 'ymyung-Precision-5820-Tower': # local
+        sys.path.append('/home/ymyung/projects/deeppk/src/chemprop')
+        smiles_dir = f'/home/ymyung/projects/deeppk/2_ML_running/1_Greedy/Feature_engineering/data/6_final2/only_smiles/{type_of_run}'
+        add_feats_dir = f'/home/ymyung/projects/deeppk/2_ML_running/1_Greedy/Feature_engineering/data/6_final2/wo_smiles/{type_of_run}/powertransform/non_redundant_features/train_val_test/no_ID_label'
+        save_dir = f'/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/2_hyper_opt/{type_of_run}'
+    elif hostname == 'bio21hpc.bio21.unimelb.edu.au': # bio21_hpc
+        sys.path.append('/home/ymyung/deeppk/src/chemprop')
+        smiles_dir = f'/home/ymyung/deeppk/1_data/1_original/{type_of_run}/train_val_test/random_split'
+        add_feats_dir = f'/home/ymyung/deeppk/1_data/1_original/{type_of_run}/train_val_test/random_split/full_features_only'
+        save_dir = f'/home/ymyung/deeppk/2_ML/sweeps'
+    elif hostname == 'wiener.hpc.dc.uq.edu.au': # wiener
+        sys.path.append('/clusterdata/uqymyung/src/chemprop')
+        smiles_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/1_original/{type_of_run}/train_val_test/random_split'
+        add_feats_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/1_original/{type_of_run}/train_val_test/random_split/full_features_only'
+        save_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/2_ML/1_Chemprop/1_MPNN/1_Random/sweeps'
+    else:
+        AssertionError('Wrong Platform')
 
-    ## for wiener
-    smiles_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/1_original/{type_of_run}/train_val_test/random_split'
-    add_feats_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/1_original/{type_of_run}/train_val_test/random_split/full_features_only'
-    save_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/2_ML/1_Chemprop/1_MPNN/1_Random/sweeps'
+    import chemprop
+    from chemprop.train import train
+    from chemprop.train.loss_functions import get_loss_func
+    from chemprop.train.evaluate import evaluate, evaluate_predictions
+    from chemprop.train.predict import predict
+    from chemprop.constants import  TRAIN_LOGGER_NAME
+    from chemprop.models import MoleculeModel
+    from chemprop.data import get_class_sizes, get_data, MoleculeDataLoader, validate_dataset_type, get_task_names
+    from chemprop.utils import build_optimizer, build_lr_scheduler, create_logger
+    from chemprop.features import set_extra_atom_fdim, set_extra_bond_fdim
 
     train_path = os.path.join(smiles_dir,'{}_train.csv'.format(label)) 
     val_path =  os.path.join(smiles_dir,'{}_val.csv'.format(label)) 
@@ -128,30 +133,39 @@ def run_Chemprop():
         '--separate_test_features_path', test_feat_path,
         '--save_dir', save_dir,
         '--separate_val_path', val_path,
-        '--separate_test_path', test_path,
-        # '--activation', str('ReLU'), # sweep_config['parameters']
-        # '--aggregation', str('norm'), # sweep_config['parameters']
-        # '--weights_ffn_num_layers', str(3), # sweep_config['parameters']
-        # '--depth', str(5), #sweep_config['parameters']
-        # '--hidden_size', str(128), #sweep_config['parameters']
-        # '--dropout', str(0.5), #sweep_config['parameters']
-        # '--ffn_num_layers', str(4), #sweep_config['parameters']
-        # '--epochs', str(50), #sweep_config['parameters']
-        # '--batch_size', str(64), #sweep_config['parameters']
-        # ]
-        '--activation', str(wandb.config.activation), # sweep_config
-        '--aggregation', str(wandb.config.aggregation), # sweep_config
-        '--weights_ffn_num_layers', str(wandb.config.weights_ffn_num_layers), # sweep_config
-        '--depth', str(wandb.config.depth), #sweep_config
-        '--hidden_size', str(wandb.config.hidden_size), #sweep_config
-        '--dropout', str(wandb.config.dropout), #sweep_config
-        '--ffn_num_layers', str(wandb.config.ffn_num_layers), #sweep_config
-        '--epochs', str(50),
-        '--batch_size', str(wandb.config.batch_size), #sweep_config
+        '--separate_test_path', test_path
         ]
-        
-    if wandb.config.bias:
-        arguments = arguments + ['--bias']
+    
+    if GLOBAL_ARGS['no_wandb']:
+        hyper_arguments = [
+            '--activation', str('ReLU'), # sweep_config['parameters']
+            '--aggregation', str('norm'), # sweep_config['parameters']
+            '--weights_ffn_num_layers', str(3), # sweep_config['parameters']
+            '--depth', str(5), #sweep_config['parameters']
+            '--hidden_size', str(128), #sweep_config['parameters']
+            '--dropout', str(0.5), #sweep_config['parameters']
+            '--ffn_num_layers', str(4), #sweep_config['parameters']
+            '--epochs', str(50), #sweep_config['parameters']
+            '--batch_size', str(64), #sweep_config['parameters']
+            ]
+    else:
+        hyper_arguments = [
+            '--activation', str(wandb.config.activation), # sweep_config
+            '--aggregation', str(wandb.config.aggregation), # sweep_config
+            '--weights_ffn_num_layers', str(wandb.config.weights_ffn_num_layers), # sweep_config
+            '--depth', str(wandb.config.depth), #sweep_config
+            '--hidden_size', str(wandb.config.hidden_size), #sweep_config
+            '--dropout', str(wandb.config.dropout), #sweep_config
+            '--ffn_num_layers', str(wandb.config.ffn_num_layers), #sweep_config
+            '--epochs', str(50),
+            '--batch_size', str(wandb.config.batch_size), #sweep_config
+            ]
+
+    arguments = arguments + hyper_arguments
+
+    if not GLOBAL_ARGS['no_wandb']:    
+        if wandb.config.bias:
+            arguments = arguments + ['--bias']
 
     if type_of_run == 'classification':
         arguments = arguments + ['--metric', 'mcc', '--extra_metrics', 'f1', 'auc', 'accuracy']
@@ -166,7 +180,6 @@ def run_Chemprop():
     
     logger = create_logger(name=TRAIN_LOGGER_NAME, save_dir=args.save_dir, quiet=args.quiet)
     torch.manual_seed(args.pytorch_seed)
-
 
     if os.path.exists(train_pt):
         train_dataset = torch.load(train_pt)
@@ -327,31 +340,79 @@ def run_Chemprop():
             logger=logger
         )
 
-        # print({"epoch": epoch,"validation_mcc": val_scores['mcc'][0], "validation_auc": val_scores['auc'][0],\
-        #             "validation_acc": val_scores['accuracy'][0], "optimizer": "Adam","learning_rate": scheduler.get_lr()[0],\
-        #             "test_mcc": test_scores['mcc'][0], "test_auc": test_scores['auc'][0], "test_acc": test_scores['accuracy'][0],\
-        #             "activation": args.activation,"batch_size": args.batch_size, "drop_out": args.dropout,\
-        #             "ffn_num_layers" : args.ffn_num_layers, "bias" : args.bias, "depth": args.depth, \
-        #             "weights_ffn_num_layers": args.weights_ffn_num_layers, "aggregation" : args.aggregation,\
-        #             })
-        
-        wandb.log({"epoch": epoch,"validation_mcc": val_scores['mcc'][0], "validation_auc": val_scores['auc'][0],\
-                    "validation_acc": val_scores['accuracy'][0], "optimizer": "Adam","learning_rate": scheduler.get_lr()[0],\
-                    "test_mcc": test_scores['mcc'][0], "test_auc": test_scores['auc'][0], "test_acc": test_scores['accuracy'][0],\
-                    "activation": args.activation,"batch_size": args.batch_size, "drop_out": args.dropout,\
-                    "ffn_num_layers" : args.ffn_num_layers, "bias" : args.bias, "depth": args.depth, \
-                    "weights_ffn_num_layers": args.weights_ffn_num_layers, "aggregation" : args.aggregation,\
-                    # "test_confusion_matrix": wandb.plot.confusion_matrix(probs=None, y_true=test_targets, preds=test_preds)
-                    })
-    wandb.finish()
+        if GLOBAL_ARGS['no_wandb']:
+            if type_of_run == "classification":
+                print({"epoch": epoch,"validation_mcc": val_scores['mcc'][0], "validation_auc": val_scores['auc'][0],\
+                        "validation_acc": val_scores['accuracy'][0], "optimizer": "Adam","learning_rate": scheduler.get_lr()[0],\
+                        "test_mcc": test_scores['mcc'][0], "test_auc": test_scores['auc'][0], "test_acc": test_scores['accuracy'][0],\
+                        "activation": args.activation,"batch_size": args.batch_size, "drop_out": args.dropout,\
+                        "ffn_num_layers" : args.ffn_num_layers, "bias" : args.bias, "depth": args.depth, \
+                        "weights_ffn_num_layers": args.weights_ffn_num_layers, "aggregation" : args.aggregation,\
+                        "validation_corr":val_scores['mcc'][0],\
+                        # "test_confusion_matrix": wandb.plot.confusion_matrix(probs=None, y_true=test_targets, preds=test_preds)
+                        })
+            else:
+                print({"epoch": epoch,"validation_r2": val_scores['r2'][0], "validation_rmse": val_scores['rmse'][0],\
+                        "optimizer": "Adam","learning_rate": scheduler.get_lr()[0],\
+                        "test_r2": test_scores['r2'][0], "test_rmse": test_scores['rmse'][0],\
+                        "activation": args.activation,"batch_size": args.batch_size, "drop_out": args.dropout,\
+                        "ffn_num_layers" : args.ffn_num_layers, "bias" : args.bias, "depth": args.depth, \
+                        "weights_ffn_num_layers": args.weights_ffn_num_layers, "aggregation" : args.aggregation,\
+                        "validation_corr": val_scores['r2'][0]
+                        })
+
+        else:
+            if type_of_run == "classification":
+                print({"epoch": epoch,"validation_mcc": val_scores['mcc'][0]})
+                wandb.log({"epoch": epoch,"validation_mcc": val_scores['mcc'][0], "validation_auc": val_scores['auc'][0],\
+                        "validation_acc": val_scores['accuracy'][0], "optimizer": "Adam","learning_rate": scheduler.get_lr()[0],\
+                        "test_mcc": test_scores['mcc'][0], "test_auc": test_scores['auc'][0], "test_acc": test_scores['accuracy'][0],\
+                        "activation": args.activation,"batch_size": args.batch_size, "drop_out": args.dropout,\
+                        "ffn_num_layers" : args.ffn_num_layers, "bias" : args.bias, "depth": args.depth, \
+                        "weights_ffn_num_layers": args.weights_ffn_num_layers, "aggregation" : args.aggregation,\
+                        "validation_corr":val_scores['mcc'][0],\
+                        # "test_confusion_matrix": wandb.plot.confusion_matrix(probs=None, y_true=test_targets, preds=test_preds)
+                        })
+            else:
+                print({"epoch": epoch,"validation_r2": val_scores['r2'][0]})
+                wandb.log({"epoch": epoch,"validation_r2": val_scores['r2'][0], "validation_rmse": val_scores['rmse'][0],\
+                        "optimizer": "Adam","learning_rate": scheduler.get_lr()[0],\
+                        "test_r2": test_scores['r2'][0], "test_rmse": test_scores['rmse'][0],\
+                        "activation": args.activation,"batch_size": args.batch_size, "drop_out": args.dropout,\
+                        "ffn_num_layers" : args.ffn_num_layers, "bias" : args.bias, "depth": args.depth, \
+                        "weights_ffn_num_layers": args.weights_ffn_num_layers, "aggregation" : args.aggregation,\
+                        "validation_corr": val_scores['r2'][0]
+                        })
+                
+    if not GLOBAL_ARGS['no_wandb']:
+        wandb.finish()
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('label', type=str, help='target name')
+    parser.add_argument('-offline', help='go offline', action='store_true')
+    parser.add_argument('-no_wandb', help='go without wandb', action='store_true')
+    
+    args = parser.parse_args()
+
+    GLOBAL_ARGS['label'] = args.label
+    GLOBAL_ARGS['offline'] = args.offline
+    GLOBAL_ARGS['no_wandb'] = args.no_wandb
+
     WANDB_API_KEY = '54c05c1e175ce6a74077275f4fde516fa66ae250'
     os.environ['WANDB_API_KEY'] = WANDB_API_KEY
-    wandb.login()
-
-    label = sys.argv[1]
-    GLOBAL_ARGS['label'] = label
-    # run_Chemprop()
-    sweep_id = wandb.sweep(sweep_config, project="Chemprop-hypopt-{}".format(label))
-    wandb.agent(sweep_id, function=run_Chemprop)
+    
+    if args.offline:
+        os.environ['WANDB_MODE'] = "offline"
+    
+    if args.no_wandb:
+        run_Chemprop() # TODO: need to update arguments for Chemprop
+        pass
+    
+    else:
+        wandb.login()
+        sweep_id = wandb.sweep(sweep_config, project="Chemprop-hypopt-{}".format(args.label))
+        wandb.agent(sweep_id, function=run_Chemprop)
+     
+   
+    
