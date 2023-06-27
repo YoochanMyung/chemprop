@@ -18,10 +18,12 @@ def run_Chemprop(args):
 
     label = args.label
     db_dir = args.db_dir
+    add_feat_dir = args.add_feat_dir
     save_path = args.save_path
     use_rdkit = args.use_rdkit
     use_additional_feats = args.use_add_feats
     use_mcc = args.use_mcc
+    no_scaling = args.no_scaling
     layer_size = args.layer_size
     ensemble_size = args.ensemble_size
 
@@ -29,9 +31,9 @@ def run_Chemprop(args):
     val_path =  os.path.join(db_dir,'{}_val.csv'.format(label)) 
     test_path =  os.path.join(db_dir,'{}_test.csv'.format(label)) 
 
-    train_feat_path = os.path.join(db_dir, 'features_only', '{}_train.csv'.format(label)) 
-    val_feat_path =  os.path.join(db_dir, 'features_only', '{}_val.csv'.format(label)) 
-    test_feat_path =  os.path.join(db_dir, 'features_only', '{}_test.csv'.format(label)) 
+    train_feat_path = os.path.join(db_dir, add_feat_dir, '{}_train.csv'.format(label)) 
+    val_feat_path =  os.path.join(db_dir, add_feat_dir, '{}_val.csv'.format(label)) 
+    test_feat_path =  os.path.join(db_dir, add_feat_dir, '{}_test.csv'.format(label)) 
 
     save_dir = os.path.join(save_path,label)
 
@@ -52,8 +54,8 @@ def run_Chemprop(args):
         '--ensemble_size', str(ensemble_size),
         '--num_workers','8',
         '--num_folds','5',
-        '--epochs', '50',
-        '--batch_size', '100',
+        '--epochs', '30',
+        '--batch_size', '128',
         '--quiet',
         '--show_individual_scores',
         '--save_smiles_splits',
@@ -62,11 +64,9 @@ def run_Chemprop(args):
 
     extra_arg = [
         '--features_generator','rdkit_2d_normalized', # additional
-        '--no_features_scaling' # additional
         ]
 
     add_args = [
-        '--no_features_scaling',
         '--features_path', train_feat_path,
         '--separate_val_features_path', val_feat_path,
         '--separate_test_features_path', test_feat_path
@@ -88,6 +88,9 @@ def run_Chemprop(args):
     if use_additional_feats:
         arguments = arguments + add_args    
 
+    if no_scaling:
+        arguments = arguments + ['--no_features_scaling']
+
     try:
         args = chemprop.args.TrainArgs().parse_args(arguments)
         mean_score, std_score = chemprop.train.cross_validate(args=args, train_func=chemprop.train.run_training)
@@ -98,6 +101,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ex) python run_chemprop_wosplit.py pyriformis_reg ./smiles .')
     parser.add_argument("label", help="Select a label to train",type=str)
     parser.add_argument("db_dir", help="Provide a directory of CSVs",type=str)
+    parser.add_argument("add_feat_dir", help="Provide a directory of CSVs",type=str)
     parser.add_argument("save_path", help="Choose dirpath",type=str)
 
     # Optional    
@@ -106,6 +110,7 @@ if __name__ == '__main__':
     parser.add_argument("--use_rdkit", help="Use rdkit feats", action='store_true')
     parser.add_argument("--use_add_feats", help="Use additional feats", action='store_true')
     parser.add_argument("--use_mcc", help="Use mcc for loss function", action='store_true')
+    parser.add_argument("--no_scaling", help="Use mcc for loss function", action='store_true')
 
     args = parser.parse_args()
 
