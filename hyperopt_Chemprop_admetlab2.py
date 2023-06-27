@@ -78,19 +78,19 @@ def run_Chemprop():
     hostname = socket.gethostname()
     if hostname == 'ymyung-Precision-5820-Tower': # local
         sys.path.append('/home/ymyung/projects/deeppk/src/chemprop')
-        smiles_dir = f'/home/ymyung/projects/deeppk/2_ML_running/1_Greedy/Feature_engineering/data/6_final2/only_smiles/{type_of_run}'
-        add_feats_dir = f'/home/ymyung/projects/deeppk/2_ML_running/1_Greedy/Feature_engineering/data/6_final2/wo_smiles/{type_of_run}/powertransform/non_redundant_features/train_val_test/no_ID_label'
-        save_dir = f'/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/2_hyper_opt/{type_of_run}'
-    elif hostname == 'bio21hpc.bio21.unimelb.edu.au': # bio21_hpc
-        sys.path.append('/home/ymyung/deeppk/src/chemprop')
-        smiles_dir = f'/home/ymyung/deeppk/1_data/1_original/{type_of_run}/train_val_test/random_split'
-        add_feats_dir = f'/home/ymyung/deeppk/1_data/1_original/{type_of_run}/train_val_test/random_split/full_features_only'
-        save_dir = f'/home/ymyung/deeppk/2_ML/sweeps'
-    elif hostname == 'wiener.hpc.dc.uq.edu.au': # wiener
-        sys.path.append('/clusterdata/uqymyung/src/chemprop')
-        smiles_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/1_original/{type_of_run}/train_val_test/random_split'
-        add_feats_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/1_original/{type_of_run}/train_val_test/random_split/full_features_only'
-        save_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/2_ML/1_Chemprop/1_MPNN/1_Random/sweeps'
+        smiles_dir = f'/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/test/admetlab2/'
+        add_feats_dir = f'/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/test/admetlab2/full_features_only/'
+        save_dir = f'/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/test/hyperopt'
+    # elif hostname == 'bio21hpc.bio21.unimelb.edu.au': # bio21_hpc
+    #     sys.path.append('/home/ymyung/deeppk/src/chemprop')
+    #     smiles_dir = f'/home/ymyung/deeppk/1_data/1_original/{type_of_run}/train_val_test/random_split'
+    #     add_feats_dir = f'/home/ymyung/deeppk/1_data/1_original/{type_of_run}/train_val_test/random_split/full_features_only'
+    #     save_dir = f'/home/ymyung/deeppk/2_ML/sweeps'
+    # elif hostname == 'wiener.hpc.dc.uq.edu.au': # wiener
+    #     sys.path.append('/clusterdata/uqymyung/src/chemprop')
+    #     smiles_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/1_original/{type_of_run}/train_val_test/random_split'
+    #     add_feats_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/1_original/{type_of_run}/train_val_test/random_split/full_features_only'
+    #     save_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/2_ML/1_Chemprop/1_MPNN/1_Random/sweeps'
     else:
         AssertionError('Wrong Platform')
 
@@ -125,7 +125,7 @@ def run_Chemprop():
         '--num_workers','8',
         '--quiet',
         '--max_lr', str(0.1),
-        '--no_features_scaling',
+        # '--no_features_scaling',
         '--data_path', train_path,
         '--dataset_type', type_of_run,
         '--features_path', train_feat_path,
@@ -411,7 +411,7 @@ if __name__ == '__main__':
     
     else:
         wandb.login()
-        sweep_id = wandb.sweep(sweep_config, project="Chemprop-hypopt-{}".format(args.label))
+        sweep_id = wandb.sweep(sweep_config, project="Chemprop-ADMETLAB2-hypopt-{}".format(args.label))
         wandb.agent(sweep_id, function=run_Chemprop)
      
    
