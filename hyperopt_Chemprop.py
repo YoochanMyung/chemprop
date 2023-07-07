@@ -17,42 +17,33 @@ reg_label_list = ["bbb_cns", "bioconcF", "bp", "caco2", "caco2_logPaap", "cl", "
                   "rat_acute_reg", "rat_chronic", "skin_permeability", "vd"]
 
 sweep_config = {
-    'method': 'bayes'
+    'method': 'grid'
 }
 metric = {
     'name': 'validation_corr',
     'goal': 'maximize'
 }
 parameters_dict = {
-    'ffn_num_layers':{
-        'values': [3, 5]
-    },
     'hidden_size': {
-        'values': [128, 256, 512, 1024, 2048]
+        'values': [128, 256, 512]
     },
     'dropout': {
         'values': [0, 0.3, 0.5]
     },
     'batch_size': {
-        'values': [32, 64, 128]
+        'values': [64, 128]
     },
     'depth': {
         'values': [3, 5]
-    },
-    'bias': {
-        'values': [False, True]
-    },
-    'weights_ffn_num_layers' : {
-        'values': [2, 4]
     },
     'aggregation': {
         'values': ['mean', 'sum', 'norm']
     },
     'activation':{
-        'values': ['ReLU', 'LeakyReLU', 'ELU']
+        'values': ['ReLU', 'ELU']
     },
 }
-sweep_config['metric'] = metric
+#sweep_config['metric'] = metric
 sweep_config['parameters'] = parameters_dict
 
 def is_classification(csv_file):
@@ -86,10 +77,10 @@ def run_Chemprop():
         smiles_dir = f'/home/ymyung/deeppk/1_data/1_original/{type_of_run}/train_val_test/random_split'
         add_feats_dir = f'/home/ymyung/deeppk/1_data/1_original/{type_of_run}/train_val_test/random_split/full_features_only'
         save_dir = f'/home/ymyung/deeppk/2_ML/sweeps'
-    elif hostname == 'wiener.hpc.dc.uq.edu.au': # wiener
+    elif hostname == 'wiener.hpc.dc.uq.edu.au' or hostname.startswith('gpunode'): # wiener
         sys.path.append('/clusterdata/uqymyung/src/chemprop')
-        smiles_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/1_original/{type_of_run}/train_val_test/random_split'
-        add_feats_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/1_original/{type_of_run}/train_val_test/random_split/full_features_only'
+        smiles_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/{type_of_run}/smiles'
+        add_feats_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/{type_of_run}/mordred'
         save_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/2_ML/1_Chemprop/1_MPNN/1_Random/sweeps'
     else:
         AssertionError('Wrong Platform')
@@ -125,7 +116,6 @@ def run_Chemprop():
         '--num_workers','8',
         '--quiet',
         '--max_lr', str(0.1),
-        '--no_features_scaling',
         '--data_path', train_path,
         '--dataset_type', type_of_run,
         '--features_path', train_feat_path,
@@ -140,11 +130,9 @@ def run_Chemprop():
         hyper_arguments = [
             '--activation', str('ReLU'), # sweep_config['parameters']
             '--aggregation', str('norm'), # sweep_config['parameters']
-            '--weights_ffn_num_layers', str(3), # sweep_config['parameters']
             '--depth', str(5), #sweep_config['parameters']
             '--hidden_size', str(128), #sweep_config['parameters']
             '--dropout', str(0.5), #sweep_config['parameters']
-            '--ffn_num_layers', str(4), #sweep_config['parameters']
             '--epochs', str(50), #sweep_config['parameters']
             '--batch_size', str(64), #sweep_config['parameters']
             ]
@@ -152,20 +140,17 @@ def run_Chemprop():
         hyper_arguments = [
             '--activation', str(wandb.config.activation), # sweep_config
             '--aggregation', str(wandb.config.aggregation), # sweep_config
-            '--weights_ffn_num_layers', str(wandb.config.weights_ffn_num_layers), # sweep_config
             '--depth', str(wandb.config.depth), #sweep_config
             '--hidden_size', str(wandb.config.hidden_size), #sweep_config
             '--dropout', str(wandb.config.dropout), #sweep_config
-            '--ffn_num_layers', str(wandb.config.ffn_num_layers), #sweep_config
             '--epochs', str(50),
             '--batch_size', str(wandb.config.batch_size), #sweep_config
             ]
 
     arguments = arguments + hyper_arguments
 
-    if not GLOBAL_ARGS['no_wandb']:    
-        if wandb.config.bias:
-            arguments = arguments + ['--bias']
+    #if not GLOBAL_ARGS['no_wandb']:    
+    arguments = arguments + ['--bias']
 
     if type_of_run == 'classification':
         arguments = arguments + ['--metric', 'mcc', '--extra_metrics', 'f1', 'auc', 'accuracy']
@@ -346,8 +331,8 @@ def run_Chemprop():
                         "validation_acc": val_scores['accuracy'][0], "optimizer": "Adam","learning_rate": scheduler.get_lr()[0],\
                         "test_mcc": test_scores['mcc'][0], "test_auc": test_scores['auc'][0], "test_acc": test_scores['accuracy'][0],\
                         "activation": args.activation,"batch_size": args.batch_size, "drop_out": args.dropout,\
-                        "ffn_num_layers" : args.ffn_num_layers, "bias" : args.bias, "depth": args.depth, \
-                        "weights_ffn_num_layers": args.weights_ffn_num_layers, "aggregation" : args.aggregation,\
+                        "depth": args.depth, \
+                        "aggregation" : args.aggregation,\
                         "validation_corr":val_scores['mcc'][0],\
                         # "test_confusion_matrix": wandb.plot.confusion_matrix(probs=None, y_true=test_targets, preds=test_preds)
                         })
@@ -356,8 +341,8 @@ def run_Chemprop():
                         "optimizer": "Adam","learning_rate": scheduler.get_lr()[0],\
                         "test_r2": test_scores['r2'][0], "test_rmse": test_scores['rmse'][0],\
                         "activation": args.activation,"batch_size": args.batch_size, "drop_out": args.dropout,\
-                        "ffn_num_layers" : args.ffn_num_layers, "bias" : args.bias, "depth": args.depth, \
-                        "weights_ffn_num_layers": args.weights_ffn_num_layers, "aggregation" : args.aggregation,\
+                        "depth": args.depth, \
+                        "aggregation" : args.aggregation,\
                         "validation_corr": val_scores['r2'][0]
                         })
 
@@ -368,8 +353,8 @@ def run_Chemprop():
                         "validation_acc": val_scores['accuracy'][0], "optimizer": "Adam","learning_rate": scheduler.get_lr()[0],\
                         "test_mcc": test_scores['mcc'][0], "test_auc": test_scores['auc'][0], "test_acc": test_scores['accuracy'][0],\
                         "activation": args.activation,"batch_size": args.batch_size, "drop_out": args.dropout,\
-                        "ffn_num_layers" : args.ffn_num_layers, "bias" : args.bias, "depth": args.depth, \
-                        "weights_ffn_num_layers": args.weights_ffn_num_layers, "aggregation" : args.aggregation,\
+                        "depth": args.depth, \
+                        "aggregation" : args.aggregation,\
                         "validation_corr":val_scores['mcc'][0],\
                         # "test_confusion_matrix": wandb.plot.confusion_matrix(probs=None, y_true=test_targets, preds=test_preds)
                         })
@@ -379,8 +364,8 @@ def run_Chemprop():
                         "optimizer": "Adam","learning_rate": scheduler.get_lr()[0],\
                         "test_r2": test_scores['r2'][0], "test_rmse": test_scores['rmse'][0],\
                         "activation": args.activation,"batch_size": args.batch_size, "drop_out": args.dropout,\
-                        "ffn_num_layers" : args.ffn_num_layers, "bias" : args.bias, "depth": args.depth, \
-                        "weights_ffn_num_layers": args.weights_ffn_num_layers, "aggregation" : args.aggregation,\
+                        "depth": args.depth, \
+                        "aggregation" : args.aggregation,\
                         "validation_corr": val_scores['r2'][0]
                         })
                 
@@ -411,7 +396,7 @@ if __name__ == '__main__':
     
     else:
         wandb.login()
-        sweep_id = wandb.sweep(sweep_config, project="Chemprop-hypopt-{}".format(args.label))
+        sweep_id = wandb.sweep(sweep_config, project="Mordred-hypopt-{}".format(args.label))
         wandb.agent(sweep_id, function=run_Chemprop)
      
    
