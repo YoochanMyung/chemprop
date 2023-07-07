@@ -31,10 +31,10 @@ class ChempropModel:
                              'using the same type of features as before (with --features_generator <generator> '
                              'and using --no_features_scaling if applicable).')
 
-        if self.train_args.atom_descriptors_size > 0 or self.train_args.atom_features_size > 0 or self.train_args.bond_features_size > 0:
+        if self.train_args.atom_descriptors_size > 0 or self.train_args.atom_features_size > 0 or self.train_args.bond_descriptors_size > 0 or self.train_args.bond_features_size > 0:
             raise NotImplementedError('The interpret function does not yet work with additional atom or bond features')
 
-        self.scaler, self.features_scaler, self.atom_descriptor_scaler, self.bond_feature_scaler = load_scalers(args.checkpoint_paths[0])
+        self.scaler, self.features_scaler, self.atom_descriptor_scaler, self.bond_descriptor_scaler, self.atom_bond_scaler = load_scalers(args.checkpoint_paths[0])
         self.checkpoints = [load_checkpoint(checkpoint_path, device=args.device) for checkpoint_path in args.checkpoint_paths]
 
     def __call__(self, smiles: List[str], batch_size: int = 500) -> List[List[float]]:
@@ -53,8 +53,8 @@ class ChempropModel:
             test_data.normalize_features(self.features_scaler)
         if self.train_args.atom_descriptor_scaling and self.args.atom_descriptors is not None:
             test_data.normalize_features(self.atom_descriptor_scaler, scale_atom_descriptors=True)
-        if self.train_args.bond_feature_scaling and self.args.bond_features_size > 0:
-            test_data.normalize_features(self.bond_feature_scaler, scale_bond_features=True)
+        if self.train_args.bond_descriptor_scaling and self.args.bond_descriptors_size > 0:
+            test_data.normalize_features(self.bond_descriptor_scaler, scale_bond_descriptors=True)
 
         test_data_loader = MoleculeDataLoader(dataset=test_data, batch_size=batch_size)
 
@@ -318,10 +318,10 @@ def interpret(args: InterpretArgs) -> None:
     header = get_header(path=args.data_path)
 
     property_name = header[args.property_id] if len(header) > args.property_id else 'score'
-    print(f'smiles,{property_name},rationale,rationale_score')
-
+    # print(f'smiles,{property_name},rationale,rationale_score')
 
     result_pd = pd.DataFrame()
+
     for smiles in all_smiles:
         score = scoring_function([smiles])[0]
         if score > args.prop_delta:
@@ -336,18 +336,19 @@ def interpret(args: InterpretArgs) -> None:
             rationales = []
 
         if len(rationales) == 0:
-            print(f'{smiles},{score:.3f},,')
+            # print(f'{smiles},{score:.3f},,')
             _pd = pd.DataFrame({'label':score},index=smiles)
             result_pd = pd.concat([result_pd,_pd])
         else:
             min_size = min(len(x.atoms) for x in rationales)
             min_rationales = [x for x in rationales if len(x.atoms) == min_size]
             rats = sorted(min_rationales, key=lambda x: x.P, reverse=True)
-            print(f'{smiles},{score:.3f},{rats[0].smiles},{rats[0].P:.3f}')
+            # print(f'{smiles},{score:.3f},{rats[0].smiles},{rats[0].P:.3f}')
             _pd = pd.DataFrame({'label':score, 'rationale':rats[0].smiles, 'rationale_score':rats[0].P},index=smiles)
             result_pd = pd.concat([result_pd,_pd])
 
-    result_pd.to_csv('rationale_result.csv')
+    # result_pd.to_csv('rationale_result.csv')
+    return result_pd
 
 def chemprop_interpret() -> None:
     """Runs interpretation of a Chemprop model.
