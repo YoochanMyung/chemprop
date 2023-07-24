@@ -82,6 +82,11 @@ def run_Chemprop():
         smiles_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/{type_of_run}/smiles'
         add_feats_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/{type_of_run}/mordred'
         save_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/2_ML/1_Chemprop/1_MPNN/1_Random/sweeps'
+    elif hostname == 'ymyung-Precision-Tower-5810':
+        sys.path.append('/home/ymyung/Projects/deeppk/src/chemprop')
+        smiles_dir = f'/home/ymyung/Projects/deeppk/data/deeppk/{type_of_run}/smiles'
+        add_feats_dir = f'/home/ymyung/Projects/deeppk/data/deeppk/{type_of_run}/mordred'
+        save_dir = '/home/ymyung/Projects/deeppk/runs/hyperopt_deeppk'
     else:
         AssertionError('Wrong Platform')
 
