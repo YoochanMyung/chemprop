@@ -13,10 +13,56 @@ import igraph
 import numpy as np
 from descriptastorus.descriptors import rdDescriptors, rdNormalizedDescriptors
 from mordred import Calculator, descriptors
+from rdkit.Chem.SaltRemover import SaltRemover
+
+from rdkit.Chem import rdDepictor  # to generate 2D depictions of molecules
+from rdkit.Chem.Draw import rdMolDraw2D # to draw 2D molecules using vectors
 
 import pandas as pd
 import random
 import json
+
+
+def standardize_mol(mol, verbose=False):
+    """Standardize the RDKit molecule, select its parent molecule, uncharge it, 
+    then enumerate all the tautomers.
+    If verbose is true, an explanation of the steps and structures of the molecule
+    as it is standardized will be output."""
+    # Follows the steps from:
+    #  https://github.com/greglandrum/RSC_OpenScience_Standardization_202104/blob/main/MolStandardize%20pieces.ipynb
+    # as described **excellently** (by Greg Landrum) in
+    # https://www.youtube.com/watch?v=eWTApNX8dJQ -- thanks JP!
+    
+    from rdkit.Chem.MolStandardize import rdMolStandardize
+    # removeHs, disconnect metal atoms, normalize the molecule, reionize the molecule
+    clean_mol = rdMolStandardize.Cleanup(mol) 
+
+    # if many fragments, get the "parent" (the actual mol we are interested in) 
+    parent_clean_mol = rdMolStandardize.FragmentParent(clean_mol)
+    
+    # try to neutralize molecule
+    uncharger = rdMolStandardize.Uncharger() # annoying, but necessary as no convenience method exists
+    uncharged_parent_clean_mol = uncharger.uncharge(parent_clean_mol)
+    
+    # Note: no attempt is made at reionization at this step
+    # nor ionization at some pH (RDKit has no pKa caculator);
+    # the main aim to to represent all molecules from different sources
+    # in a (single) standard way, for use in ML, catalogues, etc.
+    te = rdMolStandardize.TautomerEnumerator() # idem
+    taut_uncharged_parent_clean_mol = te.Canonicalize(uncharged_parent_clean_mol)
+    
+    assert taut_uncharged_parent_clean_mol != None
+    
+    if verbose: print(Chem.MolToSmiles(taut_uncharged_parent_clean_mol))
+    return taut_uncharged_parent_clean_mol
+
+def standardize_smiles(smiles, verbose=False):
+  """Standardize the SMILES string, select its parent molecule, uncharge it, 
+    then enumerate all the tautomers."""
+  if verbose: print(smiles)
+  std_mol = standardize_mol(Chem.MolFromSmiles(smiles), verbose=verbose)
+  return Chem.MolToSmiles(std_mol)
+
 
 def getAllShortestPaths(pajek_file):
     script = f"""
@@ -57,8 +103,9 @@ def smiles2ShortestPaths(smiles):
         btype = mol.GetBondBetweenAtoms(bd[0], bd[1]).GetBondTypeAsDouble()
         g.es[g.get_eid(bd[0], bd[1])]["BondType"] = btype
         # print(bd, mol.GetBondBetweenAtoms(bd[0], bd[1]).GetBondTypeAsDouble())
-    x = g.distances(source=None, target=None, weights=None, mode="all")
-
+    # x = g.distances(source=None, target=None, weights=None, mode="all")
+    x = g.shortest_paths(source=None, target=None, weights=None, mode="all")
+    # print("shortest_paths")
     output_list = list()
     for i in range(g.vcount()):
         for j in range(g.vcount()):
@@ -301,6 +348,42 @@ def graph_signatures(smiles, cutoff_step=1, cutoff_limit=10):
         result.update(d)
     
     return result
+
+def boolstr_to_floatstr(v):
+    if v == 'True':
+        return '1'
+    elif v == 'False':
+        return '0'
+    else:
+        return v
+    
+def get_deeppk_features(smiles):
+    mol = Chem.MolFromSmiles(smiles)
+    # mol = standardize_mol(mol)
+    # smiles = Chem.MolToSmiles(mol)
+    final_result = dict()
+    generator = rdDescriptors.RDKit2D()
+    rdkit_columns = list()
+    for each in generator.columns:
+        rdkit_columns.append(each[0])
+
+    rdkit_features = generator.process(smiles)[1:]
+    rdkit_result = dict(zip(rdkit_columns, rdkit_features))
+    pdCSM_features = pdCSM_fast(smiles)
+
+    # 3. MODRED
+    calc = Calculator(descriptors, ignore_3D=True)
+    mordred_features = calc(mol).drop_missing().asdict()
+
+    final_result.update(pdCSM_features)
+    final_result.update(rdkit_result)
+    final_result.update(mordred_features)
+    # final_result = np.array([[k,v] for k,v in final_result.items()])
+
+    # features = final_result[:,1:].squeeze()
+    # features = np.vectorize(boolstr_to_floatstr)(features).astype(float).tolist()
+
+    return final_result
 
 def deeppk_features(mol, target):
     def boolstr_to_floatstr(v):
