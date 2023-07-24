@@ -16,7 +16,6 @@ reg_label_list = ["bbb_cns", "bioconcF", "bp", "caco2", "caco2_logPaap", "cl", "
                   "logp", "logs", "logvp", "mdck", "mp", "pka", "pkb", "ppb", "pyriformis_reg",\
                   "rat_acute_reg", "rat_chronic", "skin_permeability", "vd"]
 
-
 def is_classification(csv_file):
     input_pd = pd.read_csv(csv_file)
     components = set(input_pd['label'].to_list())
@@ -416,12 +415,11 @@ if __name__ == '__main__':
         },
         'add_feats':{
             'values': add_feats
+            #'values': ['mordred', 'mordred_powertransform', 'mordred_reduced' ]
         },
     }
     sweep_config['metric'] = metric
     sweep_config['parameters'] = parameters_dict
-
-    #'values': ['mordred', 'mordred_powertransform', 'mordred_reduced' ]
     
     if args.offline:
         os.environ['WANDB_MODE'] = "offline"
