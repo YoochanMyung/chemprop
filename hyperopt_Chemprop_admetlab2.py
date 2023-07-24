@@ -16,45 +16,6 @@ reg_label_list = ["bbb_cns", "bioconcF", "bp", "caco2", "caco2_logPaap", "cl", "
                   "logp", "logs", "logvp", "mdck", "mp", "pka", "pkb", "ppb", "pyriformis_reg",\
                   "rat_acute_reg", "rat_chronic", "skin_permeability", "vd"]
 
-sweep_config = {
-    'method': 'bayes'
-}
-metric = {
-    'name': 'validation_corr',
-    'goal': 'maximize'
-}
-parameters_dict = {
-    'ffn_num_layers':{
-        'values': [3, 5]
-    },
-    'hidden_size': {
-        'values': [128, 256, 512, 1024, 2048]
-    },
-    'dropout': {
-        'values': [0, 0.3, 0.5]
-    },
-    'batch_size': {
-        'values': [32, 64, 128]
-    },
-    'depth': {
-        'values': [3, 5]
-    },
-    'bias': {
-        'values': [False, True]
-    },
-    'weights_ffn_num_layers' : {
-        'values': [2, 4]
-    },
-    'aggregation': {
-        'values': ['mean', 'sum', 'norm']
-    },
-    'activation':{
-        'values': ['ReLU', 'LeakyReLU', 'ELU']
-    },
-}
-sweep_config['metric'] = metric
-sweep_config['parameters'] = parameters_dict
-
 def is_classification(csv_file):
     input_pd = pd.read_csv(csv_file)
     components = set(input_pd['label'].to_list())
@@ -86,11 +47,10 @@ def run_Chemprop():
     #     smiles_dir = f'/home/ymyung/deeppk/1_data/1_original/{type_of_run}/train_val_test/random_split'
     #     add_feats_dir = f'/home/ymyung/deeppk/1_data/1_original/{type_of_run}/train_val_test/random_split/full_features_only'
     #     save_dir = f'/home/ymyung/deeppk/2_ML/sweeps'
-    # elif hostname == 'wiener.hpc.dc.uq.edu.au': # wiener
-    #     sys.path.append('/clusterdata/uqymyung/src/chemprop')
-    #     smiles_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/1_original/{type_of_run}/train_val_test/random_split'
-    #     add_feats_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/1_original/{type_of_run}/train_val_test/random_split/full_features_only'
-    #     save_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/2_ML/1_Chemprop/1_MPNN/1_Random/sweeps'
+    elif hostname == 'ymyung-Precision-Tower-5810': # wiener
+        sys.path.append('/home/ymyung/Projects/deeppk/src/chemprop')
+        smiles_dir = '/home/ymyung/Projects/deeppk/data/toxcsm/'
+        save_dir = '/home/ymyung/Projects/deeppk/runs/hyperopt_toxcsm'
     else:
         AssertionError('Wrong Platform')
 
@@ -113,10 +73,6 @@ def run_Chemprop():
     val_pt =  os.path.join(smiles_dir,'{}_val.pt'.format(label)) 
     test_pt =  os.path.join(smiles_dir,'{}_test.pt'.format(label))
 
-    train_feat_path = os.path.join(add_feats_dir, '{}_train.csv'.format(label)) 
-    val_feat_path =  os.path.join(add_feats_dir, '{}_val.csv'.format(label)) 
-    test_feat_path =  os.path.join(add_feats_dir, '{}_test.csv'.format(label)) 
-
     save_dir = os.path.join(save_dir,label)
 
     arguments = [
@@ -125,12 +81,8 @@ def run_Chemprop():
         '--num_workers','8',
         '--quiet',
         '--max_lr', str(0.1),
-        # '--no_features_scaling',
         '--data_path', train_path,
         '--dataset_type', type_of_run,
-        '--features_path', train_feat_path,
-        '--separate_val_features_path', val_feat_path,
-        '--separate_test_features_path', test_feat_path,
         '--save_dir', save_dir,
         '--separate_val_path', val_path,
         '--separate_test_path', test_path
@@ -166,6 +118,22 @@ def run_Chemprop():
     if not GLOBAL_ARGS['no_wandb']:    
         if wandb.config.bias:
             arguments = arguments + ['--bias']
+
+    if str(wandb.config.add_feats) == 'no':
+        pass
+    else:
+        add_feats_dir = os.path.join(smiles_dir, str(wandb.config.add_feats))
+        train_feat_path = os.path.join(add_feats_dir, '{}_train.csv'.format(label)) 
+        val_feat_path =  os.path.join(add_feats_dir, '{}_val.csv'.format(label)) 
+        test_feat_path =  os.path.join(add_feats_dir, '{}_test.csv'.format(label)) 
+
+        add_feats = [
+            '--features_path', train_feat_path,
+            '--separate_val_features_path', val_feat_path,
+            '--separate_test_features_path', test_feat_path
+            ]
+
+        arguments = arguments + add_feats
 
     if type_of_run == 'classification':
         arguments = arguments + ['--metric', 'mcc', '--extra_metrics', 'f1', 'auc', 'accuracy']
@@ -370,7 +338,7 @@ def run_Chemprop():
                         "activation": args.activation,"batch_size": args.batch_size, "drop_out": args.dropout,\
                         "ffn_num_layers" : args.ffn_num_layers, "bias" : args.bias, "depth": args.depth, \
                         "weights_ffn_num_layers": args.weights_ffn_num_layers, "aggregation" : args.aggregation,\
-                        "validation_corr":val_scores['mcc'][0],\
+                        "validation_corr":val_scores['mcc'][0], "add_feats" : wandb.config.add_feats,\
                         # "test_confusion_matrix": wandb.plot.confusion_matrix(probs=None, y_true=test_targets, preds=test_preds)
                         })
             else:
@@ -381,7 +349,7 @@ def run_Chemprop():
                         "activation": args.activation,"batch_size": args.batch_size, "drop_out": args.dropout,\
                         "ffn_num_layers" : args.ffn_num_layers, "bias" : args.bias, "depth": args.depth, \
                         "weights_ffn_num_layers": args.weights_ffn_num_layers, "aggregation" : args.aggregation,\
-                        "validation_corr": val_scores['r2'][0]
+                        "validation_corr": val_scores['r2'][0], "add_feats" : wandb.config.add_feats,\
                         })
                 
     if not GLOBAL_ARGS['no_wandb']:
@@ -392,7 +360,8 @@ if __name__ == '__main__':
     parser.add_argument('label', type=str, help='target name')
     parser.add_argument('-offline', help='go offline', action='store_true')
     parser.add_argument('-no_wandb', help='go without wandb', action='store_true')
-    
+    parser.add_argument('-add_feats', type=str, help='add feats')
+
     args = parser.parse_args()
 
     GLOBAL_ARGS['label'] = args.label
@@ -401,7 +370,52 @@ if __name__ == '__main__':
 
     WANDB_API_KEY = '54c05c1e175ce6a74077275f4fde516fa66ae250'
     os.environ['WANDB_API_KEY'] = WANDB_API_KEY
-    
+
+    add_feats = args.add_feats.split(',')
+
+    sweep_config = {
+    'method': 'bayes'
+    }
+    metric = {
+        'name': 'validation_corr',
+        'goal': 'maximize'
+    }
+    parameters_dict = {
+        'ffn_num_layers':{
+            'values': [3, 5]
+        },
+        'hidden_size': {
+            'values': [128, 256, 512, 1024]
+        },
+        'dropout': {
+            'values': [0, 0.3, 0.5]
+        },
+        'batch_size': {
+            'values': [32, 64, 128]
+        },
+        'depth': {
+            'values': [3, 5]
+        },
+        'bias': {
+            'values': [False, True]
+        },
+        'weights_ffn_num_layers' : {
+            'values': [2, 4]
+        },
+        'aggregation': {
+            'values': ['mean', 'sum', 'norm']
+        },
+        'activation':{
+            'values': ['ReLU', 'LeakyReLU', 'ELU']
+        },
+        'add_feats':{
+            'values': add_feats
+            #'values': ['mordred', 'mordred_powertransform', 'mordred_reduced' ]
+        },
+    }
+    sweep_config['metric'] = metric
+    sweep_config['parameters'] = parameters_dict
+
     if args.offline:
         os.environ['WANDB_MODE'] = "offline"
     
