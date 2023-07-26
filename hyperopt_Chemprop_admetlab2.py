@@ -387,40 +387,52 @@ if __name__ == '__main__':
     }
     parameters_dict = {
         'ffn_num_layers':{
-            'values': [3, 5]
+            'distribution' : 'q_uniform',
+            'min': 1,
+            'max': 3,
+            'q' : 1
         },
-        'hidden_size': {
-            'values': [128, 256, 512, 1024]
+        'hidden_size':{
+            'distribution' : 'q_uniform',
+            'min': 300,
+            'max': 2400,
+            'q' : 100
         },
-        'dropout': {
-            'values': [0, 0.3, 0.5]
+        'ffn_hidden_size':{
+            'distribution' : 'q_uniform',
+            'min': 300,
+            'max': 2400,
+            'q' : 100
         },
-        'batch_size': {
-            'values': [32, 64, 128]
+        'depth':{
+            'distribution' : 'q_uniform',
+            'min': 2,
+            'max': 6,
+            'q' : 1
         },
-        'depth': {
-            'values': [3, 5]
-        },
-        'bias': {
-            'values': [False, True]
-        },
-        'weights_ffn_num_layers' : {
-            'values': [2, 4]
-        },
-        'aggregation': {
-            'values': ['mean', 'sum', 'norm']
-        },
-        'activation':{
-            'values': ['ReLU', 'LeakyReLU', 'ELU']
+        'dropout':{
+            'distribution' : 'q_uniform',
+            'min': 0,
+            'max': 0.4,
+            'q' : 0.05
         },
         'add_feats':{
             'values': add_feats
             #'values': ['mordred', 'mordred_powertransform', 'mordred_reduced' ]
         },
     }
+
+    early_terminate = {
+        'type': 'hyperband',
+        's' : 2,
+        'eta' : 3,
+        'max_iter': 27
+    }
+
     sweep_config['metric'] = metric
     sweep_config['parameters'] = parameters_dict
-
+    sweep_config['early_terminate'] = early_terminate
+    
     if args.offline:
         os.environ['WANDB_MODE'] = "offline"
     
