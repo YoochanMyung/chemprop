@@ -127,7 +127,8 @@ def hyperopt(args: HyperoptArgs) -> None:
         run = wandb.init(project="ADMETLAB2-hypopt-{}".format(target_name),\
                     notes="Searching all hyperparameters",\
                     config = hyperparams) 
-        wandb.log({'seed':seed,'loss':loss, 'num_params': num_params, 'mcc_mean':mean_score, 'mcc_std':std_score})
+        wandb.log({'seed':seed,'loss':loss, 'num_params': num_params, f'{hyper_args.metric}_mean':mean_score,\
+                f'{hyper_args.metric}_std':std_score})
         wandb.finish()
         return {
             "loss": loss,
