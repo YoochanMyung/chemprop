@@ -163,8 +163,6 @@ def hyperopt(args: HyperoptArgs) -> None:
         os.environ["HYPEROPT_FMIN_SEED"] = str(
             hyperopt_seed
         )  # this environment variable changes the seed in fmin
-        print(fmin_objective)
-        print(trials)
         # Log the start of the trial
         logger.info(f"Initiating trial with seed {hyperopt_seed}")
         logger.info(f"Loaded {len(trials)} previous trials")
