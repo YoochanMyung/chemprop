@@ -1,4 +1,4 @@
-import wandb, argparse, json
+import wandb, argparse, json, os
 import polars as pl
 pl.Config.set_fmt_float("full")
 from tqdm import tqdm
@@ -38,7 +38,7 @@ def fetch_result(kwargs):
 	summary_pd_filtered = summary_pd.filter(summary_pd['mcc_mean']>=0)
 	# import pdb;pdb.set_trace()	
 		
-	if not run_name:
+	if str(run_name) == 'None':
 		if not reverse:
 			summary_pd_filtered = summary_pd_filtered.sort('mcc_mean', descending=True)
 		else:
@@ -68,8 +68,27 @@ def fetch_result(kwargs):
 	else:
 		best_row.update({'mordred':'False'})
 
-	with open(f'./{target}/{target}_best.json', 'w') as fp:
+	output_name = os.path.abspath(f'./{target}/{best_run.name}/{target}_best.json')
+	output_config_name = os.path.abspath(f'./{target}/{best_run.name}/{target}_best_config.log')
+	output_dir = os.path.dirname(output_name)
+	output_config = dict()
+
+	for k,v in best_row.items():
+		if k in ['activation','aggregation','aggregation_norm', 'batch_size', 'depth', 'dropout',\
+						  'ffn_hidden_size', 'ffn_num_layers', 'final_lr', 'hidden_size', 'max_lr', 'warmup_epochs']:
+			output_config[k] = v
+
+	output_config['init_lr'] = float(best_row['max_lr']) * float(best_row['init_lr_ratio'])
+	output_config['final_lr'] = float(best_row['max_lr']) * float(best_row['final_lr_ratio'])
+
+	if not os.path.exists(output_dir):
+		os.makedirs(output_dir)
+
+	with open(output_name, 'w') as fp:
 		json.dump(best_row, fp)
+
+	with open(output_config_name, 'w') as fcp:
+		json.dump(output_config, fcp)
 
 	return best_row
 

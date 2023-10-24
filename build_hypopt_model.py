@@ -19,16 +19,20 @@ def run(kwargs):
     csv_dir = '/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/5_using_other_DBs/dataset/admetlab2'
 
     if check_categorical(os.path.join('/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/5_using_other_DBs/dataset/admetlab2',f'{kwargs.endpoint}_test.csv')):
-        fetch_result({'target': kwargs.endpoint, 'r': False, 'run_name': kwargs.run_name})
+        best_run = fetch_result({'target': kwargs.endpoint, 'r': False, 'run_name': kwargs.run_name})
     else:
-        fetch_result({'target': kwargs.endpoint, 'r': True, 'run_name': kwargs.run_name})
+        best_run = fetch_result({'target': kwargs.endpoint, 'r': True, 'run_name': kwargs.run_name})
         
     print("Working on: {}".format(kwargs.endpoint))
-    print(kwargs)
-    save_dir = os.path.join(kwargs.save_path, kwargs.endpoint)
+    run_name = best_run['run_name']
+    if kwargs.run_name:
+        save_dir = os.path.join(kwargs.save_path, kwargs.endpoint, kwargs.run_name)
+    else:  
+        save_dir = os.path.join(kwargs.save_path, kwargs.endpoint, run_name)
+
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-    result_json = json.load(open(os.path.join(f'/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/5_using_other_DBs/after_hyperopt/admetlab2/{kwargs.endpoint}/{kwargs.endpoint}_best.json'), 'r'))
+    result_json = json.load(open(os.path.join(f'/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/5_using_other_DBs/after_hyperopt/admetlab2/{kwargs.endpoint}/{run_name}/{kwargs.endpoint}_best.json'), 'r'))
     result_json = {k: str(v) for k, v in result_json.items()}
 
     init_lr = float(result_json['max_lr']) * float(result_json['init_lr_ratio'])
@@ -54,11 +58,9 @@ def run(kwargs):
     '--batch_size', result_json['batch_size'],
     '--aggregation', result_json['aggregation'],
     '--hidden_size', result_json['hidden_size'],
-    # '--warmup_epochs', '3',
     '--warmup_epochs', result_json["warmup_epochs"],
     '--ffn_num_layers', result_json['ffn_num_layers'],
     '--ffn_hidden_size', result_json['ffn_hidden_size'],
-    # '--aggregation_norm', '196',
     '--aggregation_norm', result_json["aggregation_norm"],
     '--metric','mcc',
     '--num_folds','3',
