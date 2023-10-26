@@ -126,6 +126,7 @@ def hyperopt(args: HyperoptArgs) -> None:
         target_name = args.data_path.split('/')[-1].split('_train')[0]
         run = wandb.init(project="ADMETLAB2-hypopt-{}".format(target_name),\
                     notes="Searching all hyperparameters",\
+                    dir="/home/uqymyung/projects/deep_pk/3_DL/wandb_logs/",\
                     config = hyperparams) 
         wandb.log({'seed':seed,'loss':loss, 'num_params': num_params, f'{hyper_args.metric}_mean':mean_score,\
                 f'{hyper_args.metric}_std':std_score})
