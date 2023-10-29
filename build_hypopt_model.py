@@ -17,28 +17,31 @@ def check_categorical(input_csv):
 		return True
 
 def run(kwargs):
+	target_data = kwargs.data
 	# csv_dir = '/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/5_using_other_DBs/dataset/admetlab2' # Baker pc
-	csv_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/{kwargs.data}' # WIENER
+	#csv_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/{kwargs.data}' # WIENER
+	csv_dir = f'/home/ymyung/Projects/deeppk/data/{target_data}'
+	if not kwargs.title and target_data == 'toxcsm':
+		title = 'biosig/toxCSM-hypopt'
+	else:
+		title = kwargs.title
 
 	if not kwargs.config:
-		if kwargs.title:
-			best_run = fetch_result({'target': kwargs.endpoint, 'reg': kwargs.reg, 'run_name': kwargs.run_name, 'title': kwargs.title})
-		else:
-			best_run = fetch_result({'target': kwargs.endpoint, 'reg': kwargs.reg, 'run_name': kwargs.run_name})
+		best_run = fetch_result({'target': kwargs.endpoint, 'reg': kwargs.reg, 'run_name': kwargs.run_name, 'title': title})
 		run_name = best_run['run_name']
 	else:
 		best_run = 'local_run'
-		
+
 	print("Working on: {}".format(kwargs.endpoint))
 
 	if kwargs.run_name:
 		save_dir = os.path.join(kwargs.save_path, kwargs.endpoint, kwargs.run_name)
-	else:  
+	else:
 		save_dir = os.path.join(kwargs.save_path, kwargs.endpoint)
 
 	if not os.path.exists(save_dir):
 		os.makedirs(save_dir)
-	
+
 	# result_json = json.load(open(os.path.join(f'/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/5_using_other_DBs/after_hyperopt/admetlab2/{kwargs.endpoint}/{run_name}/{kwargs.endpoint}_best.json'), 'r')) # Baker pc
 	if not kwargs.config:
 		result_json = json.load(open(os.path.join(f'{kwargs.save_path}/{kwargs.endpoint}_best.json'), 'r')) # Wandb  WIENER
@@ -46,7 +49,7 @@ def run(kwargs):
 		result_json = pickle.load(open(kwargs.config, 'rb')) # local
 
 	result_json = {k: str(v) for k, v in result_json.items()}
-	
+
 	init_lr = float(result_json['max_lr']) * float(result_json['init_lr_ratio'])
 	final_lr = float(result_json['max_lr']) * float(result_json['final_lr_ratio'])
 
@@ -55,7 +58,7 @@ def run(kwargs):
 	'--target_columns','label',
 	## Input paths
 	'--data_path', os.path.join(csv_dir, f'{kwargs.endpoint}_train.csv'),
-	'--separate_val_path', os.path.join(csv_dir, f'{kwargs.endpoint}_test.csv'),
+	'--separate_val_path', os.path.join(csv_dir, f'{kwargs.endpoint}_val.csv') if target_data == 'admetlab2' else os.path.join(csv_dir, f'{kwargs.endpoint}_test.csv'),
 	'--separate_test_path', os.path.join(csv_dir, f'{kwargs.endpoint}_test.csv'),
 	'--save_dir', save_dir,
 	## Model arguments
@@ -91,11 +94,11 @@ def run(kwargs):
 
 	if kwargs.mordred or result_json.get('mordred') == 'True':
 		arguments = arguments + [
-		'--features_path', os.path.join(csv_dir, 'mordred', f'{kwargs.endpoint}_train.csv'),  
-		'--separate_val_features_path', os.path.join(csv_dir, 'mordred', f'{kwargs.endpoint}_test.csv'),  
-		'--separate_test_features_path', os.path.join(csv_dir, 'mordred', f'{kwargs.endpoint}_test.csv'),  
+		'--features_path', os.path.join(csv_dir, 'mordred', f'{kwargs.endpoint}_train.csv'),
+		'--separate_val_features_path', os.path.join(csv_dir, 'mordred',  f'{kwargs.endpoint}_val.csv' if target_data == 'admetlab2' else f'{kwargs.endpoint}_test.csv'),
+		'--separate_test_features_path', os.path.join(csv_dir, 'mordred', f'{kwargs.endpoint}_test.csv'),
 		]
-	
+
 	args = chemprop.args.TrainArgs().parse_args(arguments)
 	mean_score, std_score = chemprop.train.cross_validate(args=args, train_func=chemprop.train.run_training)
 
@@ -109,7 +112,6 @@ if __name__ == '__main__':
 	parser.add_argument("-mordred", action='store_true', help="Run type between regression and classification", default=False)
 	parser.add_argument("-run_name",type=str, default=None)
 	parser.add_argument("-title",type=str, default=None)
-	
-	
+
 	args = parser.parse_args()
 	run(args)
