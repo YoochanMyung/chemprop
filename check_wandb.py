@@ -18,6 +18,7 @@ def fetch_result(kwargs):
 
 	summary_pd = pl.DataFrame()
 	best_row = dict()
+	wandb.login(key='54c05c1e175ce6a74077275f4fde516fa66ae250')
 	api = wandb.Api()
 
 	if prefix:
