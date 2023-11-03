@@ -4,54 +4,51 @@ pl.Config.set_fmt_float("full")
 from tqdm import tqdm
 
 def fetch_result(kwargs):
+	print(kwargs)
 	if isinstance(kwargs, dict):
 		target = kwargs['target']
-		reverse = kwargs['r']
+		reg = kwargs['reg']
+		title = kwargs['title']
 		run_name = kwargs['run_name']
-		prefix = kwargs['prefix']
 
 	else:
 		target = kwargs.target
-		reverse = kwargs.r
+		reg = kwargs.reg
+		title = kwargs.title
 		run_name = kwargs.run_name
-		prefix = kwargs.prefix
 
 	summary_pd = pl.DataFrame()
 	best_row = dict()
 	api = wandb.Api()
+	metric = str()
 
-	if prefix:
-		title = f"biosig/ADMETLAB2-{prefix}-{target}"
+	title = f'{title}-{target}'
+
+	if reg:
+		metric = 'r2'
 	else:
-		title = f"biosig/ADMETLAB2-hypopt-{target}"
+		metric = 'mcc'
 
 	runs = api.runs(title)
-	# runs = api.runs(f"biosig/ADMETLAB2-hypopt-ames")
 
 	for run in tqdm(runs):
 		try:
-			_pd = pl.DataFrame({'mcc_mean': float(run.summary.get('mcc_mean')),\
-								'mcc_std': float(run.summary.get('mcc_std')),
+			_pd = pl.DataFrame({f'{metric}_mean': float(run.summary.get(f'{metric}_mean')),\
+								f'{metric}_std': float(run.summary.get(f'{metric}_std')),
 								'run_name': str(run.name),\
 								'run_id': str(run.id),\
 								'index' : str(run.name)})
-
 			_pd = pl.concat([_pd, pl.DataFrame(run.config)], how='horizontal')
-		except:
+			_pd = _pd.select([pl.all().cast(pl.Utf8)])
+			summary_pd = pl.concat([summary_pd,_pd], how='vertical')
+		except Exception as e:
 			pass
-
-		_pd = _pd.select([pl.all().cast(pl.Utf8)])
-		summary_pd = pl.concat([summary_pd,_pd], how='vertical')
-
-	summary_pd = summary_pd.with_columns(pl.col('mcc_mean').cast(pl.Float64))
-	summary_pd_filtered = summary_pd.filter(summary_pd['mcc_mean']>=0)
-	# import pdb;pdb.set_trace()	
+	
+	summary_pd = summary_pd.with_columns(pl.col(f'{metric}_mean').cast(pl.Float64))
+	summary_pd_filtered = summary_pd.filter(summary_pd[f'{metric}_mean']>=0)
 		
 	if str(run_name) == 'None':
-		if not reverse:
-			summary_pd_filtered = summary_pd_filtered.sort('mcc_mean', descending=True)
-		else:
-			summary_pd_filtered = summary_pd_filtered.sort('mcc_mean', descending=False)
+		summary_pd_filtered = summary_pd_filtered.sort(f'{metric}_mean', descending=True)
 
 		best_row = summary_pd_filtered.row(0, named=True)
 		
@@ -60,8 +57,8 @@ def fetch_result(kwargs):
 	else:
 		run_id = summary_pd_filtered.filter(summary_pd_filtered['run_name'].str.contains(f'{run_name}')).row(0,named=True)['run_id']
 		best_run = api.run(f"{title}/{run_id}")
-		_pd = pl.DataFrame({'mcc_mean': float(best_run.summary.get('mcc_mean')),\
-							'mcc_std': float(best_run.summary.get('mcc_std')),
+		_pd = pl.DataFrame({f'{metric}_mean': float(best_run.summary.get(f'{metric}_mean')),\
+							f'{metric}_std': float(best_run.summary.get(f'{metric}_std')),
 							'run_name': str(best_run.name),\
 							'run_id': str(best_run.id),\
 							'index' : str(best_run.name)})
@@ -111,9 +108,9 @@ def fetch_result(kwargs):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="A simple argument parser")
 	parser.add_argument("target", type=str, help="A Target name")
-	parser.add_argument("--r", action='store_true')
-	parser.add_argument("-run_name", type=str)
-	parser.add_argument("-prefix", type=str)
+	parser.add_argument("-reg", action='store_true')
+	parser.add_argument("-title", type=str, default='biosig/ADMETLAB2-hypopt')
+	parser.add_argument("-run_name", type=str, default=None)
 
 	args = parser.parse_args()
 	print(fetch_result(args))
