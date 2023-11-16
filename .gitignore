@@ -8,4 +8,8 @@
 *.sqlite3
 chemprop.egg-info
 docs/build
+<<<<<<< HEAD
 test/*
+=======
+dist/*
+>>>>>>> upstream/master
