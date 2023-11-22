@@ -35,6 +35,5 @@ __all__ = [
     'load_features',
     'save_features',
     'load_valid_atom_or_bond_features',
-    'reset_featurization_parameters',
-    'deeppk_features_generator'
+    'reset_featurization_parameters'
 ]

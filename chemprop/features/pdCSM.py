@@ -21,7 +21,7 @@ from rdkit.Chem.Draw import rdMolDraw2D # to draw 2D molecules using vectors
 import pandas as pd
 import random
 import json
-
+basedir = os.path.abspath(os.path.dirname(__file__))
 
 def standardize_mol(mol, verbose=False):
     """Standardize the RDKit molecule, select its parent molecule, uncharge it, 
@@ -286,7 +286,8 @@ def graph_signatures(smiles, cutoff_step=1, cutoff_limit=10):
         for key in pharm_keys:
             if AtomPharm.get(str(i)) and key in AtomPharm[str(i)]:
                 PharmCount[key] += 1
-
+    print("HELLO")
+    print(PharmCount)
     edgeCount = {}
     for key1 in pharm_keys:
         for key2 in pharm_keys:
@@ -394,7 +395,7 @@ def deeppk_features(mol, target):
         else:
             return v
 
-    features_json = json.load(open('/home/ymyung/projects/deeppk/2_ML_running/1_Greedy/Feature_engineering/data/6_final2/only_smiles/classification/features.json','r'))
+    features_json = json.load(open(os.path.join(basedir, 'features.json'),'r'))
     feature_list = features_json[target]
     final_result = dict()
 
@@ -413,18 +414,37 @@ def deeppk_features(mol, target):
     calc = Calculator(descriptors, ignore_3D=True)
     mordred_features = calc(mol).drop_missing().asdict()
     selected_mordred_features  = dict()
+    selected_pdCSM_features  = dict()
+    selected_rdkit_features  = dict()
+
     for k,v in mordred_features.items():
         if k in feature_list:
             selected_mordred_features[k] = v    
 
-    final_result.update(pdCSM_features)
+    for k,v in pdCSM_features.items():
+        if k in feature_list:
+            selected_pdCSM_features[k] = v    
+
+    for k,v in rdkit_result.items():
+        if k in feature_list:
+            selected_rdkit_features[k] = v    
+
+    # final_result.update(pdCSM_features)
+    final_result.update(selected_pdCSM_features)
+
     final_result.update(selected_mordred_features)
-    final_result.update(rdkit_result)
+    # final_result.update(mordred_features)
+
+    # final_result.update(rdkit_result)
+    final_result.update(selected_rdkit_features)
+
+    # print(final_result.keys())
     final_result = np.array([[k,v] for k,v in final_result.items()])
+
+    #TODO: Need to follow the order of features used for training
 
     features = final_result[:,1:].squeeze()
     features = np.vectorize(boolstr_to_floatstr)(features).astype(float).tolist()
-
     return features
 
 
@@ -440,12 +460,12 @@ def pdCSM_fast(smiles, cutoff_step=1, cutoff_limit=10):
     HeavyAtomCount = descriptors['HeavyAtomCount']
     
     # Calculate pharmacophore count
-    PharmCount = {key: 0 for key in pharm_keys}
+    PharmCount = {f'{key}_Count': 0 for key in pharm_keys}
 
     for i in range(HeavyAtomCount):
         for key in pharm_keys:
             if AtomPharm.get(str(i)) and key in AtomPharm[str(i)]:
-                PharmCount[key] += 1
+                PharmCount[f'{key}_Count'] += 1
 
     edgeCount = {}
     for key1 in pharm_keys:
