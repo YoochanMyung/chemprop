@@ -7,6 +7,7 @@ import pandas as pd
 import sys, pickle
 #sys.path.append('/home/ymyung/projects/deeppk/src/chemprop') # Baker pc
 #sys.path.append('/clusterdata/uqymyung/src/chemprop') # WIENER
+sys.path.append('/home/uqymyung/src/chemprop') # friday
 
 def check_categorical(input_csv):
         input_pd = pd.read_csv(input_csv)

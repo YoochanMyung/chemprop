@@ -9,12 +9,14 @@ from hyperopt import fmin, tpe, Trials
 import numpy as np
 import wandb
 import glob
+import socket
+import time
 
 from chemprop.args import HyperoptArgs
 from chemprop.constants import HYPEROPT_LOGGER_NAME
 from chemprop.models import MoleculeModel
 from chemprop.nn_utils import param_count
-from chemprop.train import cross_validate, run_training
+from chemprop.train import cross_validate_hypopt, run_training
 from chemprop.utils import create_logger, makedirs, timeit
 from chemprop.hyperopt_utils import merge_trials, load_trials, save_trials, \
     get_hyperopt_seed, load_manual_trials, build_search_space, save_config
@@ -102,8 +104,9 @@ def hyperopt(args: HyperoptArgs) -> None:
             hyper_args.final_lr = hyperparams["max_lr"] * hyperparams["final_lr_ratio"]
 
         # Cross validate
-        mean_score, std_score = cross_validate(args=hyper_args, train_func=run_training)
-
+        start_time = time.time()
+        mean_score, std_score, extra_metrics_dict = cross_validate_hypopt(args=hyper_args, train_func=run_training)
+        elapsed_time = time.time() - start_time
         # Record results
         temp_model = MoleculeModel(hyper_args)
         num_params = param_count(temp_model)
@@ -124,12 +127,14 @@ def hyperopt(args: HyperoptArgs) -> None:
         loss = (1 if hyper_args.minimize_score else -1) * mean_score
 
         target_name = args.data_path.split('/')[-1].split('_train')[0]
-        run = wandb.init(project="DEEPPK-hypopt-{}".format(target_name),\
+        run = wandb.init(project="DEEPPK-pdCSM-hypopt-{}".format(target_name),\
                     notes="Searching all hyperparameters",\
                     dir="/home/uqymyung/projects/deep_pk/3_DL/wandb_logs/",\
                     config = hyperparams) 
-        wandb.log({'seed':seed,'loss':loss, 'num_params': num_params, f'{hyper_args.metric}_mean':mean_score,\
-                f'{hyper_args.metric}_std':std_score})
+        log_dict = {'seed':seed,'loss':loss, 'num_params': num_params, f'{hyper_args.metric}_mean':mean_score,\
+                f'{hyper_args.metric}_std':std_score, 'hostname':socket.gethostname(), 'time_cost':elapsed_time}
+        log_dict.update(extra_metrics_dict)
+        wandb.log(log_dict)
         wandb.finish()
         return {
             "loss": loss,
