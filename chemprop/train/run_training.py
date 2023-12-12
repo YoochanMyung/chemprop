@@ -445,4 +445,7 @@ def run_training(args: TrainArgs,
 
         test_preds_dataframe.to_csv(os.path.join(args.save_dir, 'test_preds.csv'), index=False)
 
+    # Remove model
+    os.remove(os.path.join(save_dir, MODEL_FILE_NAME))
+
     return ensemble_scores
