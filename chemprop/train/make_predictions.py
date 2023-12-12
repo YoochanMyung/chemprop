@@ -28,7 +28,7 @@ def load_model(args: PredictArgs, generator: bool = False):
     train_args = load_args(args.checkpoint_paths[0])
     num_tasks, task_names = train_args.num_tasks, train_args.task_names
 
-    update_prediction_args(predict_args=args, train_args=train_args)
+    update_prediction_args(predict_args=args, train_args=train_args, validate_feature_sources=False)
     args: Union[PredictArgs, TrainArgs]
 
     # Load model and scalers
