@@ -22,11 +22,8 @@ def run(kwargs):
     # csv_dir = '/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/5_using_other_DBs/dataset/admetlab2' # Baker pc
 	# csv_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/{kwargs.data}' # WIENER
 	# csv_dir = f'/home/ymyung/Projects/deeppk/data/{target_data}' # for bio21
-	csv_dir = f'/home/uqymyung/scratch/projects/deeppk/dataset/' # for friday
-	if not kwargs.title and target_data == 'toxcsm':
-		title = 'biosig/toxCSM-hypopt'
-	else:
-		title = kwargs.title
+	csv_dir = f'/home/uqymyung/scratch/projects/deeppk/dataset/{target_data}' # for friday
+	title = kwargs.title
 
 	if not kwargs.config:
 		best_run = fetch_result({'target': kwargs.endpoint, 'reg': kwargs.reg, 'run_name': kwargs.run_name, 'title': title})
