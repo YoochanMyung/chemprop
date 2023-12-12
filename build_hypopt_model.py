@@ -5,14 +5,9 @@ import simplejson as json
 from check_wandb import fetch_result
 import pandas as pd
 import sys, pickle
-<<<<<<< HEAD
 #sys.path.append('/home/ymyung/projects/deeppk/src/chemprop') # Baker pc
 #sys.path.append('/clusterdata/uqymyung/src/chemprop') # WIENER
 sys.path.append('/home/uqymyung/src/chemprop') # friday
-=======
-sys.path.append('/home/ymyung/projects/deeppk/src/chemprop') # Baker pc
-# sys.path.append('/clusterdata/uqymyung/src/chemprop') # WIENER
->>>>>>> 831b8da27eacaeff4de4839cdcccd9cb422f1439
 
 def check_categorical(input_csv):
 	input_pd = pd.read_csv(input_csv)
@@ -24,10 +19,10 @@ def check_categorical(input_csv):
 
 def run(kwargs):
 	target_data = kwargs.data
-	csv_dir = '/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/5_using_other_DBs/dataset/admetlab2' # Baker pc
+    # csv_dir = '/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/5_using_other_DBs/dataset/admetlab2' # Baker pc
 	# csv_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/{kwargs.data}' # WIENER
 	# csv_dir = f'/home/ymyung/Projects/deeppk/data/{target_data}' # for bio21
-	# csv_dir = f'/home/ymyung/Projects/deeppk/data/{target_data}'
+	csv_dir = f'/home/uqymyung/scratch/projects/deeppk/dataset/' # for friday
 	if not kwargs.title and target_data == 'toxcsm':
 		title = 'biosig/toxCSM-hypopt'
 	else:
