@@ -127,9 +127,9 @@ def hyperopt(args: HyperoptArgs) -> None:
         loss = (1 if hyper_args.minimize_score else -1) * mean_score
 
         target_name = args.data_path.split('/')[-1].split('_train')[0]
-        run = wandb.init(project="DEEPPK-pdCSM-hypopt-{}".format(target_name),\
+        run = wandb.init(project="{}-{}".format(hyper_args.project_name, target_name),\
                     notes="Searching all hyperparameters",\
-                    dir="/home/uqymyung/projects/deep_pk/3_DL/wandb_logs/",\
+                    dir=os.path.abspath("~/wandb_logs/"),\
                     config = hyperparams) 
         log_dict = {'seed':seed,'loss':loss, 'num_params': num_params, f'{hyper_args.metric}_mean':mean_score,\
                 f'{hyper_args.metric}_std':std_score, 'hostname':socket.gethostname(), 'time_cost':elapsed_time}

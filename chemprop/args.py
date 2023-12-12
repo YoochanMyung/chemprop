@@ -1025,7 +1025,7 @@ class FingerprintArgs(PredictArgs):
 
 class HyperoptArgs(TrainArgs):
     """:class:`HyperoptArgs` includes :class:`TrainArgs` along with additional arguments used for optimizing Chemprop hyperparameters."""
-
+    project_name : str = None
     num_iters: int = 20
     """Number of hyperparameter choices to try."""
     hyperopt_seed: int = 0
