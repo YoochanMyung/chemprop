@@ -23,6 +23,8 @@ from chemprop.hyperopt_utils import merge_trials, load_trials, save_trials, \
 
 WANDB_API_KEY = '54c05c1e175ce6a74077275f4fde516fa66ae250'
 os.environ['WANDB_API_KEY'] = WANDB_API_KEY
+os.environ['WANDB__SERVICE_WAIT'] = "300"
+os.environ["WANDB_MODE"] = "offline"
 
 @timeit(logger_name=HYPEROPT_LOGGER_NAME)
 def hyperopt(args: HyperoptArgs) -> None:
@@ -130,7 +132,7 @@ def hyperopt(args: HyperoptArgs) -> None:
         run = wandb.init(project="{}-{}".format(hyper_args.project_name, target_name),\
                     notes="Searching all hyperparameters",\
                     dir=os.path.abspath("~/wandb_logs/"),\
-                    config = hyperparams) 
+                    config = hyperparams)
         log_dict = {'seed':seed,'loss':loss, 'num_params': num_params, f'{hyper_args.metric}_mean':mean_score,\
                 f'{hyper_args.metric}_std':std_score, 'hostname':socket.gethostname(), 'time_cost':elapsed_time}
         log_dict.update(extra_metrics_dict)
