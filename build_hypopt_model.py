@@ -7,9 +7,10 @@ import pandas as pd
 import sys, pickle
 #sys.path.append('/home/ymyung/projects/deeppk/src/chemprop') # Baker pc
 #sys.path.append('/clusterdata/uqymyung/src/chemprop') # WIENER
-sys.path.append('/home/uqymyung/src/chemprop') # friday
+#sys.path.append('/home/uqymyung/src/chemprop') # friday
 
 reg_list = ['bbb_cns','bioconcF','bp','caco2','caco2_logPaap','cl','fdamdd_reg','fm_reg','fu','hydrationE','lc50','lc50dm','ld50','logbcf','logd','logp','logs','logvp','mdck','mp','pka','pkb','ppb','pyriformis_reg','rat_acute_reg','skin_permeability','vd']
+
 def check_categorical(input_csv):
 	input_pd = pd.read_csv(input_csv)
 	components = set(input_pd['label'].to_list())
@@ -19,11 +20,12 @@ def check_categorical(input_csv):
 		return True
 
 def run(kwargs):
-	target_data = kwargs.data
+	target_data = kwargs.data_name
 	# csv_dir = '/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/5_using_other_DBs/dataset/admetlab2' # Baker pc
 	# csv_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/{kwargs.data}' # WIENER
 	# csv_dir = f'/home/ymyung/Projects/deeppk/data/{target_data}' # for bio21
-	csv_dir = f'/home/uqymyung/scratch/projects/deeppk/dataset/{target_data}' # for friday
+	# csv_dir = f'/home/uqymyung/scratch/projects/deeppk/dataset/{target_data}' # for friday
+	csv_dir = os.path.join(kwargs.data_path, target_data)
 	title = kwargs.title
 	reg = True if kwargs.endpoint in reg_list else False
 
@@ -104,8 +106,9 @@ def run(kwargs):
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='ex) python build_hypopt_model.py run . -run_name silvery-dust-1001')
-	parser.add_argument("data", help="Choose dataset",type=str, choices=['admetlab2','toxcsm','deeppk'])
+	parser.add_argument("data_name", help="Choose dataset",type=str, choices=['admetlab2','toxcsm','deeppk'])
 	parser.add_argument("endpoint", help="Choose endpoint name",type=str)
+	parser.add_argument("data_path", help="Specify path for CSVs", type=str)
 	parser.add_argument("save_path", help="Choose dir path for save",type=str)
 	parser.add_argument("-config", type=str, help="Provide a config.json rather than searhcing Wandb.", default=None)
 	parser.add_argument("-features",  help="Name of folder for additional features", default=None)
