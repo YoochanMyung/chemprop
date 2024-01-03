@@ -9,6 +9,7 @@ import sys, pickle
 #sys.path.append('/clusterdata/uqymyung/src/chemprop') # WIENER
 sys.path.append('/home/uqymyung/src/chemprop') # friday
 
+reg_list = ['bbb_cns','bioconcF','bp','caco2','caco2_logPaap','cl','fdamdd_reg','fm_reg','fu','hydrationE','lc50','lc50dm','ld50','logbcf','logd','logp','logs','logvp','mdck','mp','pka','pkb','ppb','pyriformis_reg','rat_acute_reg','skin_permeability','vd']
 def check_categorical(input_csv):
 	input_pd = pd.read_csv(input_csv)
 	components = set(input_pd['label'].to_list())
@@ -19,14 +20,15 @@ def check_categorical(input_csv):
 
 def run(kwargs):
 	target_data = kwargs.data
-    # csv_dir = '/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/5_using_other_DBs/dataset/admetlab2' # Baker pc
+	# csv_dir = '/home/ymyung/projects/deeppk/2_ML_running/2_Chemprop/5_using_other_DBs/dataset/admetlab2' # Baker pc
 	# csv_dir = f'/clusterdata/uqymyung/uqymyung/projects/deeppk/1_dataset/{kwargs.data}' # WIENER
 	# csv_dir = f'/home/ymyung/Projects/deeppk/data/{target_data}' # for bio21
 	csv_dir = f'/home/uqymyung/scratch/projects/deeppk/dataset/{target_data}' # for friday
 	title = kwargs.title
+	reg = True if kwargs.endpoint in reg_list else False
 
 	if not kwargs.config:
-		best_run = fetch_result({'target': kwargs.endpoint, 'reg': kwargs.reg, 'run_name': kwargs.run_name, 'title': title})
+		best_run = fetch_result({'target': kwargs.endpoint, 'reg': reg, 'run_name': kwargs.run_name, 'title': title})
 		run_name = best_run['run_name']
 	else:
 		best_run = 'local_run'
@@ -75,9 +77,9 @@ def run(kwargs):
 	'--aggregation_norm', str(int(float(result_json["aggregation_norm"]))),
 	'--num_folds','3',
 	'--save_preds',
-	'--num_workers','8']
+	'--num_workers','4']
 
-	if kwargs.reg:
+	if reg:
 		arguments = arguments + [
 		'--dataset_type', 'regression',
 		'--metric','r2',
@@ -90,11 +92,11 @@ def run(kwargs):
 		'--extra_metrics', 'f1','auc','accuracy',
 		]
 
-	if kwargs.mordred or result_json.get('mordred') == 'True':
+	if kwargs.features:
 		arguments = arguments + [
-		'--features_path', os.path.join(csv_dir, 'mordred', f'{kwargs.endpoint}_train.csv'),
-		'--separate_val_features_path', os.path.join(csv_dir, 'mordred',  f'{kwargs.endpoint}_val.csv' if target_data == 'admetlab2' else f'{kwargs.endpoint}_test.csv'),
-		'--separate_test_features_path', os.path.join(csv_dir, 'mordred', f'{kwargs.endpoint}_test.csv'),
+		'--features_path', os.path.join(csv_dir, kwargs.features , f'{kwargs.endpoint}_train.csv'),
+		'--separate_val_features_path', os.path.join(csv_dir, kwargs.features,  f'{kwargs.endpoint}_val.csv' if target_data == 'admetlab2' else f'{kwargs.endpoint}_test.csv'),
+		'--separate_test_features_path', os.path.join(csv_dir, kwargs.features, f'{kwargs.endpoint}_test.csv'),
 		]
 
 	args = chemprop.args.TrainArgs().parse_args(arguments)
@@ -106,10 +108,8 @@ if __name__ == '__main__':
 	parser.add_argument("endpoint", help="Choose endpoint name",type=str)
 	parser.add_argument("save_path", help="Choose dir path for save",type=str)
 	parser.add_argument("-config", type=str, help="Provide a config.json rather than searhcing Wandb.", default=None)
-	parser.add_argument("-reg", action='store_true', help="")
-	parser.add_argument("-mordred", action='store_true', help="Run type between regression and classification", default=False)
+	parser.add_argument("-features",  help="Name of folder for additional features", default=None)
 	parser.add_argument("-run_name",type=str, default=None)
 	parser.add_argument("-title",type=str, default=None)
-
 	args = parser.parse_args()
 	run(args)
