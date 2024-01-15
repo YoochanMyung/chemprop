@@ -31,7 +31,7 @@ def main(args):
 			doesnt_exist_list.append(pkl)
 		else:
 			does_exist_list.append(pkl)
-	print(f"Doesn't: {len(doesnt_exist_list)} , Does: {len(does_exist_list)}, Wandb: {len(wandb_pl}")
+	print(f"Doesn't: {len(doesnt_exist_list)} , Does: {len(does_exist_list)}, Wandb: {len(wandb_pl)}")
 
 	if len(doesnt_exist_list) > 0:
 		for pkl in doesnt_exist_list:
