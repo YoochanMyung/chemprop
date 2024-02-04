@@ -1,7 +1,7 @@
 import wandb, glob, os, sys, pickle, argparse, copy
 from tqdm import tqdm
 import polars as pl
-reg_list = ['bbb_cns','bioconcF','bp','caco2','caco2_logPaap','cl','fdamdd_reg','fm_reg','fu','hydrationE','lc50','lc50dm','ld50','logbcf','logd','logp','logs','logvp','mdck','mp','pka','pkb','ppb','pyriformis_reg','rat_acute_reg','rat_chronic','skin_permeability','vd']
+reg_list = ['bbb_cns','bioconcF','bp','caco2','caco2_logPaap','cl','fdamdd_reg','fm_reg','fu','hydrationE','lc50','lc50dm','ld50','logbcf','logd','logp','logs','logvp','mdck','mp','pka','pkb','ppb','pyriformis_reg','rat_acute_reg','rat_chronic','skin_permeability','vd','bbb(lobbb)','caco2_reg']
 WANDB_API_KEY = '54c05c1e175ce6a74077275f4fde516fa66ae250'
 os.environ['WANDB_API_KEY'] = WANDB_API_KEY
 cwd = os.getcwd()
@@ -97,6 +97,49 @@ def fetch_Wandb_results(wandb_project_name, target):
 		
 	return summary_pd
 
+# Newly upate
+def update_Wandb_results_in_empty_project(args):
+	endpoint_name = args.endpoint
+	wandb_project_name = args.project_name
+	print(endpoint_name, wandb_project_name, cwd)
+	target_dir = os.path.join(cwd, endpoint_name)
+	pkl_list = glob.glob(os.path.join(target_dir,'*.pkl'))
+	pkl_list.sort()
+
+	for pkl in pkl_list:
+		_scores = dict()
+		_upload_dict = dict()
+
+		_Trials = pickle.load(open(pkl, 'rb'))
+		_seed = _Trials.best_trial['result']['seed']
+		_num_params = _Trials.best_trial['result']['num_params']
+		_hyperparams = _Trials.best_trial['result']['hyperparams']
+
+		_hostname = glob.glob(os.path.join(os.path.dirname(pkl),f'trial_seed_{_seed}/fold_0/model_0/event*'))[0].split('.')[-1]
+		_test_scores_csv = os.path.join(os.path.dirname(pkl), f'trial_seed_{_seed}','test_scores.csv')
+		_test_scores_dict = pl.read_csv(_test_scores_csv).to_dict(as_series=False)
+
+		if not endpoint_name in reg_list:
+			for each_class_metric in ['mcc','auc','f1','accuracy']:
+				_scores[f'{each_class_metric}_mean'] = _test_scores_dict[f'Mean {each_class_metric}'][0]
+				_scores[f'{each_class_metric}_std'] = _test_scores_dict[f'Standard deviation {each_class_metric}'][0]
+		else:
+			for each_reg_metric in ['mae','mse','rmse','r2']:
+				_scores[f'{each_reg_metric}_mean'] = _test_scores_dict[f'Mean {each_reg_metric}'][0]
+				_scores[f'{each_reg_metric}_std'] = _test_scores_dict[f'Standard deviation {each_reg_metric}'][0]
+		
+		_upload_dict.update(_scores)
+		_upload_dict['hostname'] = _hostname
+		_upload_dict['seed'] = _seed
+		_upload_dict['num_params'] = _num_params
+		_upload_dict['loss'] = str(_Trials.best_trial['result']['loss'])
+
+		run = wandb.init(project=f"{wandb_project_name}-{endpoint_name}",\
+			notes="Manually added",\
+			config = _hyperparams) 
+		wandb.log(_upload_dict)
+		wandb.finish()
+
 # Bring all results from Wandb First and make it as pandas table
 def remove_non_hostname_Wandb_results(wandb_project_name, target):
 	summary_pd = pl.DataFrame()
@@ -115,9 +158,16 @@ def remove_non_hostname_Wandb_results(wandb_project_name, target):
 	return summary_pd
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='This script is for updating offline Hypopt jobs to Wandb.')
+	parser.add_argument('task', choices=['add', 'update', 'remove'], help='Choose one task')
 	parser.add_argument('project_name', type=str, help='Specify a project name of Wandb.')
 	parser.add_argument('endpoint', type=str, help='Provide an Endpoint name.')
 	args = parser.parse_args()
-	main(args)
+	if args.task == 'update':
+		main(args)
+	elif args.task == 'add':
+		update_Wandb_results_in_empty_project(args)
+	elif args.task == 'remove':
+		remove_non_hostname_Wandb_results(args.project_name, args.endpoint)
+	else:
+		print("Got Wrong Task")
 	# fetch_Wandb_results('DEEPPK-pdCSM-hypopt', 'rat_acute_class')
-	# remove_non_hostname_Wandb_results(args.project_name, args.endpoint)
