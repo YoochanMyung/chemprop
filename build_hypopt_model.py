@@ -9,7 +9,7 @@ import sys, pickle
 #sys.path.append('/clusterdata/uqymyung/src/chemprop') # WIENER
 #sys.path.append('/home/uqymyung/src/chemprop') # friday
 
-reg_list = ['rat_chronic','bbb_cns','bioconcF','bp','caco2','caco2_logPaap','cl','fdamdd_reg','fm_reg','fu','hydrationE','lc50','lc50dm','ld50','logbcf','logd','logp','logs','logvp','mdck','mp','pka','pkb','ppb','pyriformis_reg','rat_acute_reg','skin_permeability','vd']
+reg_list = ['rat_chronic','bbb_cns','bioconcF','bp','caco2_reg','cl','fdamdd_reg','fm_reg','fu','hydrationE','lc50','lc50dm','ld50','logbcf','logd','logp','logs','logvp','mdck','mp','pka','pkb','ppb','pyriformis_reg','rat_acute_reg','skin_permeability','vd']
 
 def check_categorical(input_csv):
 	input_pd = pd.read_csv(input_csv)
