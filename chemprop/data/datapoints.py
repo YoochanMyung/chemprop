@@ -34,7 +34,7 @@ class _DatapointMixin:
     def __post_init__(self):
         NAN_TOKEN = 0
         if self.x_d is not None:
-            self.x_d[np.isnan(self.x_d)] = NAN_TOKEN
+            self.x_d[np.argwhere(np.isnan(self.x_d))] = NAN_TOKEN
 
     @property
     def t(self) -> int | None:
@@ -80,11 +80,11 @@ class MoleculeDatapoint(_DatapointMixin, _MoleculeDatapointMixin):
 
         NAN_TOKEN = 0
         if self.V_f is not None:
-            self.V_f[np.isnan(self.V_f)] = NAN_TOKEN
+            self.V_f[np.argwhere(np.isnan(self.V_f))] = NAN_TOKEN
         if self.E_f is not None:
-            self.E_f[np.isnan(self.E_f)] = NAN_TOKEN
+            self.E_f[np.argwhere(np.isnan(self.E_f))] = NAN_TOKEN
         if self.V_d is not None:
-            self.V_d[np.isnan(self.V_d)] = NAN_TOKEN
+            self.V_d[np.argwhere(np.isnan(self.V_d))] = NAN_TOKEN
 
         super().__post_init__()
 
